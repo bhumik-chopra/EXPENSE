@@ -90,8 +90,8 @@ export default function ExpenseTable() {
         </button>
       </div>
       
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col gap-2 xl:flex-row">
+        <div className="relative min-w-0 flex-1">
           <input 
             className="w-full rounded-lg border px-3 py-2 pl-9 text-sm" 
             placeholder="Search vendor..." 
@@ -100,30 +100,32 @@ export default function ExpenseTable() {
           />
           <Search className="absolute left-2 top-2 text-gray-400" size={18} />
         </div>
-        <select 
-          className="rounded-lg border px-3 py-2 text-sm" 
-          value={category} 
-          onChange={e => setCategory(e.target.value)}
-        >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <input 
-          type="date" 
-          className="rounded-lg border px-3 py-2 text-sm" 
-          value={date} 
-          onChange={e => setDate(e.target.value)} 
-        />
-        <button 
-          className="rounded-lg px-3 py-2 bg-blue-50 text-blue-700 flex items-center gap-1"
-          onClick={fetchExpenses}
-        >
-          <Filter size={16} />Filter
-        </button>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex xl:w-auto">
+          <select 
+            className="rounded-lg border px-3 py-2 text-sm xl:min-w-[180px]" 
+            value={category} 
+            onChange={e => setCategory(e.target.value)}
+          >
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <input 
+            type="date" 
+            className="rounded-lg border px-3 py-2 text-sm xl:min-w-[170px]" 
+            value={date} 
+            onChange={e => setDate(e.target.value)} 
+          />
+          <button 
+            className="rounded-lg px-3 py-2 bg-blue-50 text-blue-700 flex items-center justify-center gap-1 xl:min-w-[110px]"
+            onClick={fetchExpenses}
+          >
+            <Filter size={16} />Filter
+          </button>
+        </div>
       </div>
       
-      <div className="overflow-x-auto">
+      <div className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-gray-500 border-b">

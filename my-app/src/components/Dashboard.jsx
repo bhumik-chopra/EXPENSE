@@ -7,6 +7,14 @@ import LineChartCard from "./LineChartCard";
 import BudgetProgressCard from "./BudgetProgressCard";
 
 export default function Dashboard() {
+  const cards = [
+    { key: "upload", content: <UploadCard /> },
+    { key: "pie", content: <PieChartCard /> },
+    { key: "table", content: <ExpenseTable />, className: "lg:col-span-2" },
+    { key: "line", content: <LineChartCard /> },
+    { key: "budget", content: <BudgetProgressCard /> },
+  ];
+
   return (
     <Motion.div
       className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
@@ -21,15 +29,16 @@ export default function Dashboard() {
         },
       }}
     >
-      {[<UploadCard key="upload" />, <PieChartCard key="pie" />, <ExpenseTable key="table" />, <LineChartCard key="line" />, <BudgetProgressCard key="budget" />].map((card) => (
+      {cards.map((card) => (
         <Motion.div
           key={card.key}
+          className={card.className || ""}
           variants={{
             hidden: { opacity: 0, y: 18 },
             visible: { opacity: 1, y: 0 },
           }}
         >
-          {card}
+          {card.content}
         </Motion.div>
       ))}
     </Motion.div>
