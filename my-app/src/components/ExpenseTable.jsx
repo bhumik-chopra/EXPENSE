@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion as Motion } from "framer-motion";
 import { Search, Filter, RefreshCw } from "lucide-react";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 import { formatDateInfo } from '../utils/dateUtils';
 
 export default function ExpenseTable() {
+  const { theme } = useTheme();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -69,7 +73,7 @@ export default function ExpenseTable() {
   // Get unique categories for filter dropdown
   const categories = ['All Categories', ...new Set(expenses.map(e => e.category))];
 
-  return (
+  const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6"
       initial={{ opacity: 0, y: 20 }}
@@ -194,5 +198,13 @@ export default function ExpenseTable() {
         </div>
       )}
     </Motion.div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }

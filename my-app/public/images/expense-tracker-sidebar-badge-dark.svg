@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" fill="none">
+  <rect width="960" height="320" rx="34" fill="#130D24"/>
+  <rect x="80" y="56" width="800" height="208" rx="28" fill="url(#cardGlow)" stroke="url(#borderGlow)" stroke-width="6"/>
+  <path d="M80 84C80 68.536 92.536 56 108 56H336V264H108C92.536 264 80 251.464 80 236V84Z" fill="#1A1230"/>
+  <rect x="336" y="56" width="544" height="208" rx="0" fill="url(#panelGlow)"/>
+  <path d="M336 56H852C867.464 56 880 68.536 880 84V236C880 251.464 867.464 264 852 264H336V56Z" fill="#22183B" fill-opacity=".72"/>
+  <circle cx="252" cy="92" r="34" fill="url(#coinGlow)"/>
+  <path d="M246.4 111V104.46C242.1 104.025 238.54 102.48 235.72 99.824L239.36 94.88C242.074 97.1067 244.78 98.3733 247.48 98.68V89.696C243.55 88.7787 240.65 87.496 238.78 85.848C236.9 84.2 235.96 81.7147 235.96 78.392C235.96 75.016 237.105 72.3147 239.4 70.288C241.705 68.2613 244.398 67.14 247.48 66.924V61.96H252.904V67.188C256.445 67.5947 259.538 68.8453 262.184 70.94L258.752 76.184C256.73 74.6533 254.776 73.6773 252.904 73.256V81.872C256.997 82.804 259.997 84.1013 261.904 85.764C263.812 87.4267 264.768 89.9627 264.768 93.372C264.768 96.748 263.594 99.464 261.248 101.52C258.908 103.576 256.127 104.692 252.904 104.868V111H246.4ZM247.48 73.96C246.02 74.0933 244.82 74.56 243.88 75.36C242.954 76.1467 242.488 77.208 242.488 78.544C242.488 79.832 242.903 80.824 243.736 81.52C244.58 82.2 245.828 82.8133 247.48 83.36V73.96ZM252.904 98.112C254.362 98.0293 255.575 97.5627 256.544 96.712C257.514 95.8613 258 94.7573 258 93.4C258 92.0107 257.565 90.9493 256.696 90.216C255.827 89.4667 254.563 88.8133 252.904 88.256V98.112Z" fill="white"/>
+  <path d="M152 123C152 114.163 159.163 107 168 107H236C244.837 107 252 114.163 252 123V206C252 214.837 244.837 222 236 222H168C159.163 222 152 214.837 152 206V123Z" fill="url(#receiptGlow)"/>
+  <path d="M182 134H214" stroke="#130D24" stroke-width="9" stroke-linecap="round"/>
+  <path d="M180 157H221" stroke="#130D24" stroke-width="9" stroke-linecap="round"/>
+  <path d="M180 180H215" stroke="#130D24" stroke-width="9" stroke-linecap="round"/>
+  <path d="M168 222L179 211L190 222L201 211L212 222" stroke="#130D24" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M230 132C230 123.163 237.163 116 246 116H318C326.837 116 334 123.163 334 132V213C334 221.837 326.837 229 318 229H246C237.163 229 230 221.837 230 213V132Z" fill="url(#walletGlow)"/>
+  <path d="M248 145H315" stroke="#130D24" stroke-opacity=".58" stroke-width="7" stroke-dasharray="12 9" stroke-linecap="round"/>
+  <path d="M248 200H315" stroke="#130D24" stroke-opacity=".58" stroke-width="7" stroke-dasharray="12 9" stroke-linecap="round"/>
+  <path d="M248 145V200" stroke="#130D24" stroke-opacity=".58" stroke-width="7" stroke-dasharray="12 9" stroke-linecap="round"/>
+  <path d="M315 145V200" stroke="#130D24" stroke-opacity=".58" stroke-width="7" stroke-dasharray="12 9" stroke-linecap="round"/>
+  <rect x="274" y="160" width="44" height="30" rx="15" fill="#F5D0FE" stroke="#130D24" stroke-width="7"/>
+  <circle cx="296" cy="175" r="7" fill="#130D24"/>
+  <path d="M278 101L320 61" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <path d="M320 61L312 92" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <path d="M320 61L288 67" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <line x1="336" y1="56" x2="336" y2="264" stroke="url(#dividerGlow)" stroke-width="4"/>
+  <text x="390" y="128" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="700">EXPENSE</text>
+  <text x="390" y="204" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="700">TRACKER</text>
+  <text x="390" y="246" fill="#F5D0FE" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="600" letter-spacing="2">TRACK • MANAGE • SAVE</text>
+  <defs>
+    <linearGradient id="cardGlow" x1="80" y1="56" x2="880" y2="264" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#241142"/>
+      <stop offset="1" stop-color="#1A132F"/>
+    </linearGradient>
+    <linearGradient id="borderGlow" x1="80" y1="56" x2="880" y2="264" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/>
+      <stop offset=".55" stop-color="#C084FC"/>
+      <stop offset="1" stop-color="#F472B6"/>
+    </linearGradient>
+    <linearGradient id="panelGlow" x1="336" y1="56" x2="880" y2="264" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A1D4A"/>
+      <stop offset="1" stop-color="#231636"/>
+    </linearGradient>
+    <linearGradient id="coinGlow" x1="218" y1="58" x2="286" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C084FC"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="receiptGlow" x1="152" y1="107" x2="252" y2="222" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCE7F3"/>
+      <stop offset="1" stop-color="#D8B4FE"/>
+    </linearGradient>
+    <linearGradient id="walletGlow" x1="230" y1="116" x2="334" y2="229" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C084FC"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="dividerGlow" x1="336" y1="56" x2="336" y2="264" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#F472B6"/>
+    </linearGradient>
+  </defs>
+</svg>

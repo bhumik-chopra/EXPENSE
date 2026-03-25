@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion as Motion } from "framer-motion";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 
 export default function LineChartCard() {
+  const { theme } = useTheme();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -50,7 +54,7 @@ export default function LineChartCard() {
     return `${x},${y}`;
   }).join(" ") : "";
 
-  return (
+  const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6 flex flex-col gap-2"
       initial={{ opacity: 0, y: 20 }}
@@ -103,5 +107,13 @@ export default function LineChartCard() {
         </>
       )}
     </Motion.div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }

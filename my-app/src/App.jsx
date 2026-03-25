@@ -5,6 +5,7 @@ import Dashboard from "./components/Dashboard";
 import UploadCard from "./components/UploadCard";
 import Reports from "./components/Reports";
 import Settings from "./components/Settings";
+import { ThemeContext } from "./components/ThemeContext";
 
 export default function App() {
   const [page, setPage] = useState("Dashboard");
@@ -42,24 +43,26 @@ export default function App() {
   else if (page === "Settings") content = <Settings />;
 
   return (
-    <div className={`app-shell flex min-h-screen bg-gray-50 ${theme === "dark" ? "theme-dark" : ""}`}>
-      <Sidebar
-        setPage={handlePageChange}
-        activePage={page}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Navbar
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onToggleSidebar={() => setSidebarOpen((current) => !current)}
-          sidebarOpen={sidebarOpen}
+    <ThemeContext.Provider value={{ theme }}>
+      <div className={`app-shell flex min-h-screen bg-gray-50 ${theme === "dark" ? "theme-dark" : ""}`}>
+        <Sidebar
+          setPage={handlePageChange}
+          activePage={page}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {content}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Navbar
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onToggleSidebar={() => setSidebarOpen((current) => !current)}
+            sidebarOpen={sidebarOpen}
+          />
+          <main className="flex-1 overflow-auto p-4 md:p-6">
+            {content}
+          </main>
+        </div>
       </div>
-    </div>
+    </ThemeContext.Provider>
   );
 }

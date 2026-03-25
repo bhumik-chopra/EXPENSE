@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion as Motion } from "framer-motion";
 import { Settings, Target, TrendingUp, AlertTriangle } from "lucide-react";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 
 export default function BudgetProgressCard() {
+  const { theme } = useTheme();
   const parsedBudget =
     typeof window !== "undefined" ? Number.parseFloat(window.localStorage.getItem("monthlyBudget")) : NaN;
   const initialBudget = Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : 10000;
@@ -75,7 +79,7 @@ export default function BudgetProgressCard() {
     return <Target size={16} className="text-green-500" />;
   };
 
-  return (
+  const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
       initial={{ opacity: 0, y: 20 }}
@@ -176,5 +180,13 @@ export default function BudgetProgressCard() {
         </div>
       )}
     </Motion.div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }

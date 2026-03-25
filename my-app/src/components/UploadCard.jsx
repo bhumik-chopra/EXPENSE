@@ -1,10 +1,14 @@
 import React, { useRef, useState } from "react";
 import { UploadCloud, CheckCircle, AlertCircle, Calendar, Clock, FileText, Image, Edit3, Plus } from "lucide-react";
 import { motion as Motion } from "framer-motion";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 import { getCurrentLocalDate, formatDisplayDate } from '../utils/dateUtils';
 
 
 export default function UploadCard() {
+  const { theme } = useTheme();
   const [extractedData, setExtractedData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -216,7 +220,7 @@ export default function UploadCard() {
     if (file) handleFile(file);
   };
 
-  return (
+  const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
       initial={{ opacity: 0, y: 20 }}
@@ -539,5 +543,13 @@ export default function UploadCard() {
         </details>
       )}
     </Motion.div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }

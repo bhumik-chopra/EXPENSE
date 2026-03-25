@@ -1,6 +1,7 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
 import { Home, Upload, BarChart2, Settings } from "lucide-react";
+import { useTheme } from "./ThemeContext";
 
 
 const menu = [
@@ -11,6 +12,8 @@ const menu = [
 ];
 
 export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
+  const { theme } = useTheme();
+
   return (
     <>
       {isOpen && (
@@ -29,7 +32,15 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
         transition={{ duration: 0.35 }}
       >
         <div className="mb-8 px-6 pt-10 md:pt-0">
-          <span className="text-2xl font-bold text-gray-800">EXPENSE<br />TRACKER</span>
+          <img
+            src={
+              theme === "dark"
+                ? "/images/expense-tracker-sidebar-badge-dark.svg"
+                : "/images/expense-tracker-sidebar-badge.svg"
+            }
+            alt="Expense Tracker"
+            className="w-full max-w-[220px] rounded-2xl object-contain"
+          />
         </div>
         <nav className="flex-1 px-2">
           <ul className="space-y-2">

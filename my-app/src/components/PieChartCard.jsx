@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 
 const COLORS = ["#2563eb", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0f766e"];
 
 export default function PieChartCard() {
+  const { theme } = useTheme();
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,7 +69,7 @@ export default function PieChartCard() {
   const total = segments.reduce((sum, segment) => sum + segment.amount, 0);
   let cumulative = 0;
 
-  return (
+  const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
       initial={{ opacity: 0, y: 20 }}
@@ -135,5 +139,13 @@ export default function PieChartCard() {
         </>
       )}
     </Motion.div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }

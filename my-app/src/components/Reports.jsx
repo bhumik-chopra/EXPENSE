@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
+import BorderGlow from "./BorderGlow";
+import { darkModeGlowProps } from "./borderGlowTheme";
+import { useTheme } from "./ThemeContext";
 
 export default function Reports() {
+  const { theme } = useTheme();
   const [month, setMonth] = useState("");
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -134,7 +138,7 @@ export default function Reports() {
     printWindow.print();
   };
 
-  return (
+  const cardContent = (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-2xl font-semibold mb-6">Download Monthly Expenses</h2>
 
@@ -234,5 +238,13 @@ export default function Reports() {
         </div>
       )}
     </div>
+  );
+
+  return theme === "dark" ? (
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
+  ) : (
+    cardContent
   );
 }
