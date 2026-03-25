@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 export default function LineChartCard() {
   const [data, setData] = useState([]);
@@ -51,9 +51,9 @@ export default function LineChartCard() {
   }).join(" ") : "";
 
   return (
-    <motion.div 
-      className="bg-white rounded-xl shadow p-6 flex flex-col gap-2" 
-      initial={{ opacity: 0, y: 20 }} 
+    <Motion.div
+      className="bg-white rounded-xl shadow p-6 flex flex-col gap-2"
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <h2 className="font-semibold mb-2">Monthly Expenses</h2>
@@ -102,6 +102,6 @@ export default function LineChartCard() {
           </ul>
         </>
       )}
-    </motion.div>
+    </Motion.div>
   );
 }

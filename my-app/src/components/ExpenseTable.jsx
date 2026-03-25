@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion as Motion } from "framer-motion";
 import { Search, Filter, RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
 import { formatDateInfo } from '../utils/dateUtils';
 
 export default function ExpenseTable() {
@@ -11,7 +11,7 @@ export default function ExpenseTable() {
   const [category, setCategory] = useState("All Categories");
   const [date, setDate] = useState("");
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -33,7 +33,7 @@ export default function ExpenseTable() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, date]);
 
   useEffect(() => {
     fetchExpenses();
@@ -50,7 +50,7 @@ export default function ExpenseTable() {
       window.removeEventListener('expenseAdded', handleExpenseChange);
       window.removeEventListener('expenseDeleted', handleExpenseChange);
     };
-  }, []);
+  }, [fetchExpenses]);
 
   // Filter expenses based on search and filters
   const filtered = expenses.filter(e =>
@@ -70,7 +70,11 @@ export default function ExpenseTable() {
   const categories = ['All Categories', ...new Set(expenses.map(e => e.category))];
 
   return (
-    <motion.div className="bg-white rounded-xl shadow p-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+    <Motion.div
+      className="bg-white rounded-xl shadow p-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Expense History</h3>
         <button 
@@ -189,6 +193,6 @@ export default function ExpenseTable() {
           Showing {filtered.length} of {expenses.length} expenses
         </div>
       )}
-    </motion.div>
+    </Motion.div>
   );
 }

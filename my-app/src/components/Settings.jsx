@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion as Motion } from "framer-motion";
 
 export default function Settings() {
   const [username, setUsername] = useState("John Doe");
@@ -20,8 +21,16 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="bg-white rounded-xl shadow p-6 max-w-md w-full mx-auto mb-4">
+    <Motion.div
+      className="flex flex-col items-center"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      <Motion.div
+        className="bg-white rounded-xl shadow p-6 max-w-md w-full mx-auto mb-4"
+        whileHover={{ y: -2 }}
+      >
         <h2 className="font-semibold mb-4">User Settings</h2>
 
         <div className="flex flex-col items-center mb-6">
@@ -71,15 +80,17 @@ export default function Settings() {
             placeholder="Enter email"
           />
         </div>
-      </div>
+      </Motion.div>
 
-      <button
+      <Motion.button
         type="button"
         className="bg-red-500 text-white px-4 py-2 rounded shadow w-full max-w-md"
         onClick={handleLogout}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
       >
         Logout
-      </button>
-    </div>
+      </Motion.button>
+    </Motion.div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { UploadCloud, CheckCircle, AlertCircle, Calendar, Clock, FileText, Image, Edit3, Plus } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { getCurrentLocalDate, formatDisplayDate } from '../utils/dateUtils';
 
 
@@ -217,7 +217,11 @@ export default function UploadCard() {
   };
 
   return (
-    <motion.div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+    <Motion.div
+      className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
       {/* System Status and Date Info */}
       <div className="mb-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center justify-between">
@@ -534,6 +538,6 @@ export default function UploadCard() {
           </div>
         </details>
       )}
-    </motion.div>
+    </Motion.div>
   );
 }

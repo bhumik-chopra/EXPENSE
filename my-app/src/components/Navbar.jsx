@@ -1,30 +1,54 @@
 import React from "react";
-import { UserCircle } from "lucide-react";
+import { motion as Motion } from "framer-motion";
+import { Menu, Moon, Sun, UserCircle, X } from "lucide-react";
 import StatusIndicator from "./StatusIndicator";
 
-export default function Navbar() {
+export default function Navbar({ theme, onToggleTheme, onToggleSidebar, sidebarOpen }) {
   return (
-    <nav className="flex items-center justify-between h-16 px-6 bg-white shadow-sm">
-      <div className="flex items-center gap-2">
-        {/* React logo SVG */}
-        <svg height="32" width="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="3" fill="#61DAFB"/>
-          <g stroke="#61DAFB" strokeWidth="2" fill="none">
-            <ellipse rx="10" ry="4.5" cx="16" cy="16"/>
-            <ellipse rx="10" ry="4.5" cx="16" cy="16" transform="rotate(60 16 16)"/>
-            <ellipse rx="10" ry="4.5" cx="16" cy="16" transform="rotate(120 16 16)"/>
-          </g>
-        </svg>
-        <h1 className="text-xl font-bold tracking-tight">Smart Expense Tracker</h1>
+    <Motion.nav
+      className="flex items-center justify-between gap-3 px-4 py-3 md:h-16 md:px-6 bg-white shadow-sm"
+      initial={{ opacity: 0, y: -16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <Motion.button
+          className="rounded-full p-2 hover:bg-gray-100 transition md:hidden"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? "Close navigation" : "Open navigation"}
+        >
+          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+        </Motion.button>
+        <Motion.img
+          src={theme === "dark" ? "/images/expense-tracker-logo-dark.svg" : "/images/smartspend-logo.svg"}
+          alt="Expense Tracker logo"
+          className="h-9 w-9 rounded-xl object-contain"
+        />
+        <h1 className="truncate text-lg font-bold tracking-tight md:text-xl">Expense Tracker</h1>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <StatusIndicator />
-        <span className="text-gray-600">Hello, User</span>
-        <button className="rounded-full p-2 hover:bg-gray-100 transition">
+        <Motion.button
+          className="rounded-full p-2 hover:bg-gray-100 transition"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={onToggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun size={22} /> : <Moon size={22} />}
+        </Motion.button>
+        <span className="hidden text-gray-600 sm:inline">Hello, User</span>
+        <Motion.button
+          className="rounded-full p-2 hover:bg-gray-100 transition"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+        >
           <UserCircle size={28} />
-        </button>
+        </Motion.button>
       </div>
-    </nav>
+    </Motion.nav>
   );
 }

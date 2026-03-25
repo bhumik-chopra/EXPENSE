@@ -94,7 +94,7 @@ export default function Reports() {
         </head>
         <body>
           <div class="header">
-            <h1>SmartSpend Expense Report</h1>
+            <h1>Expense Tracker Report</h1>
             <h2>${month || "All Time"}</h2>
           </div>
           <table>
@@ -138,23 +138,23 @@ export default function Reports() {
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-2xl font-semibold mb-6">Download Monthly Expenses</h2>
 
-      <div className="flex gap-4 mb-6">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:flex-wrap">
         <input
           type="month"
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-auto"
           placeholder="Select month"
         />
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition-colors"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition-colors md:w-auto"
           onClick={downloadCSV}
           disabled={loading}
         >
           Download CSV
         </button>
         <button
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow transition-colors"
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow transition-colors md:w-auto"
           onClick={downloadPDF}
           disabled={loading}
         >
