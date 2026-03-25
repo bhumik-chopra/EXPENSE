@@ -19,10 +19,12 @@ export default function App() {
   });
 
   useEffect(() => {
+    document.body.classList.toggle("theme-light-body", theme === "light");
     document.body.classList.toggle("theme-dark-body", theme === "dark");
     window.localStorage.setItem("expense-tracker-theme", theme);
 
     return () => {
+      document.body.classList.remove("theme-light-body");
       document.body.classList.remove("theme-dark-body");
     };
   }, [theme]);
@@ -44,7 +46,11 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={{ theme }}>
-      <div className={`app-shell flex min-h-screen bg-gray-50 ${theme === "dark" ? "theme-dark" : ""}`}>
+      <div
+        className={`app-shell flex min-h-screen bg-gray-50 ${
+          theme === "dark" ? "theme-dark" : "theme-light"
+        }`}
+      >
         <Sidebar
           setPage={handlePageChange}
           activePage={page}

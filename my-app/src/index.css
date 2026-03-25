@@ -4,8 +4,8 @@
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
-  background: #f9fafb;
+  color: #1e293b;
+  background: #f1f5f9;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,7 +25,7 @@ body,
 
 body {
   min-height: 100vh;
-  background: #f9fafb;
+  background: #f1f5f9;
   transition:
     background-color 0.25s ease,
     color 0.25s ease;
@@ -42,6 +42,94 @@ textarea {
   transition:
     background-color 0.25s ease,
     color 0.25s ease;
+}
+
+.theme-light-body {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 20%),
+    linear-gradient(180deg, #f1f5f9 0%, #dbeafe 100%);
+  color: #1e293b;
+}
+
+.theme-light {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 20%),
+    linear-gradient(180deg, #f1f5f9 0%, #dbeafe 100%);
+  color: #1e293b;
+}
+
+.theme-light .bg-gray-50 {
+  background-color: #f1f5f9 !important;
+}
+
+.theme-light .bg-white {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 246, 255, 0.98) 100%) !important;
+}
+
+.theme-light .bg-blue-50,
+.theme-light .bg-blue-100 {
+  background-color: rgba(96, 165, 250, 0.16) !important;
+}
+
+.theme-light .bg-green-50,
+.theme-light .bg-orange-50,
+.theme-light .bg-purple-50,
+.theme-light .bg-red-50,
+.theme-light .bg-yellow-50,
+.theme-light .bg-gray-100,
+.theme-light .bg-green-100,
+.theme-light .bg-orange-100,
+.theme-light .bg-red-100 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+.theme-light .bg-blue-500,
+.theme-light .bg-blue-600,
+.theme-light .bg-blue-700 {
+  background:
+    linear-gradient(135deg, #60a5fa 0%, #2563eb 100%) !important;
+}
+
+.theme-light .text-blue-400,
+.theme-light .text-blue-600,
+.theme-light .text-blue-700,
+.theme-light .text-blue-800,
+.theme-light .text-blue-900 {
+  color: #2563eb !important;
+}
+
+.theme-light .text-gray-400,
+.theme-light .text-gray-500,
+.theme-light .text-gray-600,
+.theme-light .text-gray-700,
+.theme-light .text-gray-800,
+.theme-light .text-gray-900 {
+  color: #1e293b !important;
+}
+
+.theme-light .border,
+.theme-light .border-t,
+.theme-light .border-b,
+.theme-light .border-2,
+.theme-light .border-blue-200,
+.theme-light .border-blue-500,
+.theme-light .border-blue-600,
+.theme-light .border-gray-100,
+.theme-light .border-gray-300,
+.theme-light .border-green-200,
+.theme-light .border-orange-200,
+.theme-light .border-red-200,
+.theme-light .border-yellow-200 {
+  border-color: rgba(37, 99, 235, 0.14) !important;
+}
+
+.theme-light .shadow,
+.theme-light .shadow-md,
+.theme-light .shadow-sm {
+  box-shadow:
+    0 16px 40px rgba(37, 99, 235, 0.08),
+    0 0 0 1px rgba(96, 165, 250, 0.12) !important;
 }
 
 .theme-dark-body {
