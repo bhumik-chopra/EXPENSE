@@ -1812,6 +1812,8 @@ def logout():
 def process_bill():
     """API endpoint to process uploaded bill image or PDF"""
     try:
+        json_data = request.get_json(silent=True) or {}
+
         # Check for PDF file
         if 'pdf' in request.files:
             file = request.files['pdf']
@@ -1829,7 +1831,7 @@ def process_bill():
             return jsonify(result)
         
         # Check for image file
-        elif 'image' in request.files or 'image_data' in request.json:
+        elif 'image' in request.files or 'image_data' in json_data:
             if 'image' in request.files:
                 # Handle file upload
                 file = request.files['image']
@@ -1838,7 +1840,7 @@ def process_bill():
                 filename = file.filename
             else:
                 # Handle base64 image data
-                image_data = request.json['image_data']
+                image_data = json_data['image_data']
                 image_array = image_data
                 filename = 'uploaded_image'
             
@@ -1859,7 +1861,7 @@ def process_bill():
 def categorize_expense():
     """API endpoint to categorize an expense"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         description = data.get('description', '')
         amount = data.get('amount', 0)
         
@@ -1881,7 +1883,7 @@ def expenses():
     try:
         if request.method == 'POST':
             # Add new expense
-            data = request.json
+            data = request.get_json(silent=True) or {}
             
             # Validate required fields
             required_fields = ['vendor', 'amount', 'category', 'date']

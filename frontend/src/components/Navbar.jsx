@@ -2,6 +2,8 @@ import React from "react";
 import { motion as Motion } from "framer-motion";
 import { LogOut, Menu, Moon, Settings, Sun, X } from "lucide-react";
 import StatusIndicator from "./StatusIndicator";
+import smartspendLogo from "../assets/smartspend-logo.svg";
+import expenseTrackerLogoDark from "../assets/expense-tracker-logo-dark.svg";
 
 export default function Navbar({
   theme,
@@ -37,7 +39,7 @@ export default function Navbar({
           {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
         </Motion.button>
         <Motion.img
-          src={theme === "dark" ? "/images/expense-tracker-logo-dark.svg" : "/images/smartspend-logo.svg"}
+          src={theme === "dark" ? expenseTrackerLogoDark : smartspendLogo}
           alt="Expense Tracker logo"
           className="h-9 w-9 rounded-xl object-contain"
         />

@@ -2,6 +2,8 @@ import React from "react";
 import { motion as Motion } from "framer-motion";
 import { Home, Upload, BarChart2, Settings } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import sidebarBadge from "../assets/expense-tracker-sidebar-badge.svg";
+import sidebarBadgeDark from "../assets/expense-tracker-sidebar-badge-dark.svg";
 
 
 const menu = [
@@ -33,11 +35,7 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
       >
         <div className="mb-8 px-6 pt-10 md:pt-0">
           <img
-            src={
-              theme === "dark"
-                ? "/images/expense-tracker-sidebar-badge-dark.svg"
-                : "/images/expense-tracker-sidebar-badge.svg"
-            }
+            src={theme === "dark" ? sidebarBadgeDark : sidebarBadge}
             alt="Expense Tracker"
             className="w-full max-w-[220px] rounded-2xl object-contain"
           />

@@ -4,6 +4,8 @@ import { AlertCircle, Cake, LockKeyhole, Mail, Moon, Sun, UserRound } from "luci
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { apiFetch } from "../utils/api";
+import sidebarBadge from "../assets/expense-tracker-sidebar-badge.svg";
+import authBackground from "../assets/image.png";
 
 export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
   const [mode, setMode] = useState("signin");
@@ -79,7 +81,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
           <div className="flex items-start justify-between gap-4">
           <div>
             <img
-              src="/images/expense-tracker-sidebar-badge.svg"
+              src={sidebarBadge}
               alt="Expense Tracker logo"
               className="h-14 w-auto max-w-[220px] object-contain"
             />
@@ -258,14 +260,27 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   return (
     <div
-      className={`flex h-screen items-center justify-center overflow-hidden px-4 py-4 ${
+      className={`relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 ${
         theme === "dark" ? "theme-dark" : "theme-light"
       }`}
+      style={{
+        backgroundImage: `url(${authBackground})`,
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
+      }}
     >
+      <div
+        className={`absolute inset-0 ${
+          theme === "dark" ? "bg-slate-950/70" : "bg-white/55"
+        }`}
+      />
       {theme === "dark" ? (
-        <BorderGlow {...darkModeGlowProps}>{loginCard}</BorderGlow>
+        <div className="relative z-10">
+          <BorderGlow {...darkModeGlowProps}>{loginCard}</BorderGlow>
+        </div>
       ) : (
-        loginCard
+        <div className="relative z-10">{loginCard}</div>
       )}
     </div>
   );
