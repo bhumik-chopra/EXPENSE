@@ -155,7 +155,7 @@ export default function App() {
             onOpenSettings={() => handlePageChange("Settings")}
             onLogout={handleLogout}
           />
-          <main className="flex-1 overflow-auto p-4 md:p-6">
+          <main className={`flex-1 p-4 md:p-6 ${page === "Settings" ? "overflow-hidden" : "overflow-auto"}`}>
             {content}
           </main>
         </div>
