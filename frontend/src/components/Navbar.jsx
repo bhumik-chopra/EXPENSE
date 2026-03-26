@@ -1,9 +1,24 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
-import { Menu, Moon, Sun, UserCircle, X } from "lucide-react";
+import { LogOut, Menu, Moon, Settings, Sun, X } from "lucide-react";
 import StatusIndicator from "./StatusIndicator";
 
-export default function Navbar({ theme, onToggleTheme, onToggleSidebar, sidebarOpen }) {
+export default function Navbar({
+  theme,
+  onToggleTheme,
+  onToggleSidebar,
+  sidebarOpen,
+  user,
+  onOpenSettings,
+  onLogout,
+}) {
+  const initials = (user?.name || user?.username || "U")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <Motion.nav
       className="flex items-center justify-between gap-3 px-4 py-3 md:h-16 md:px-6 bg-white shadow-sm"
@@ -40,13 +55,30 @@ export default function Navbar({ theme, onToggleTheme, onToggleSidebar, sidebarO
         >
           {theme === "dark" ? <Sun size={22} /> : <Moon size={22} />}
         </Motion.button>
-        <span className="hidden text-gray-600 sm:inline">Hello, User</span>
+        <Motion.button
+          className="hidden items-center gap-3 rounded-full px-3 py-2 hover:bg-gray-100 transition sm:flex"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={onOpenSettings}
+          title="Open settings"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+            {initials}
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-sm font-semibold">{user?.name}</span>
+            <span className="block truncate text-xs text-gray-600">@{user?.username}</span>
+          </span>
+          <Settings size={18} />
+        </Motion.button>
         <Motion.button
           className="rounded-full p-2 hover:bg-gray-100 transition"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
+          onClick={onLogout}
+          title="Logout"
         >
-          <UserCircle size={28} />
+          <LogOut size={20} />
         </Motion.button>
       </div>
     </Motion.nav>
