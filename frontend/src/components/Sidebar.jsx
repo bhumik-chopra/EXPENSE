@@ -34,11 +34,22 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
         transition={{ duration: 0.35 }}
       >
         <div className="mb-8 px-6 pt-10 md:pt-0">
-          <img
-            src={theme === "dark" ? sidebarBadgeDark : sidebarBadge}
-            alt="Expense Tracker"
-            className="w-full max-w-[220px] rounded-2xl object-contain"
-          />
+          <div className="relative h-16 w-full max-w-[220px] overflow-hidden rounded-2xl">
+            <Motion.img
+              src={sidebarBadge}
+              alt="Expense Tracker"
+              className="absolute inset-0 h-full w-full object-contain object-left px-2 py-1"
+              animate={{ opacity: theme === "dark" ? 0 : 1, scale: theme === "dark" ? 0.992 : 1 }}
+              transition={{ duration: 0.42, ease: "easeInOut" }}
+            />
+            <Motion.img
+              src={sidebarBadgeDark}
+              alt="Expense Tracker dark"
+              className="absolute inset-0 h-full w-full object-contain object-left px-2 py-1"
+              animate={{ opacity: theme === "dark" ? 1 : 0, scale: theme === "dark" ? 1 : 0.992 }}
+              transition={{ duration: 0.42, ease: "easeInOut" }}
+            />
+          </div>
         </div>
         <nav className="flex-1 px-2">
           <ul className="space-y-2">

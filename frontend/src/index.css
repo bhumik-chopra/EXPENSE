@@ -38,6 +38,127 @@ textarea {
   font: inherit;
 }
 
+.theme-toggle-button {
+  font-size: 13px;
+  position: relative;
+  display: inline-block;
+  width: 5.6em;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.theme-toggle-button svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.theme-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.theme-toggle-container,
+.theme-toggle-stars,
+.theme-toggle-button-knob,
+.theme-toggle-sun,
+.theme-toggle-moon,
+.theme-toggle-cloud {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.25s;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-container {
+  fill: #7c3aed;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-button-knob {
+  transform: translate(28px, 2.333px);
+}
+
+.theme-toggle-sun {
+  opacity: 1;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-sun {
+  opacity: 0;
+}
+
+.theme-toggle-moon {
+  opacity: 0;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-moon {
+  opacity: 1;
+}
+
+.theme-toggle-cloud {
+  opacity: 1;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-cloud {
+  opacity: 0;
+}
+
+.theme-toggle-stars {
+  opacity: 0;
+}
+
+.theme-toggle-input:checked + svg .theme-toggle-stars {
+  opacity: 1;
+}
+
+.auth-input {
+  background: transparent !important;
+}
+
+.theme-light .auth-input {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
+
+.theme-dark .auth-input {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+}
+
+.theme-light .auth-input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+.theme-dark .auth-input::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+}
+
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  transition: background-color 9999s ease-in-out 0s;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+}
+
+.theme-light .auth-input:-webkit-autofill,
+.theme-light .auth-input:-webkit-autofill:hover,
+.theme-light .auth-input:-webkit-autofill:focus,
+.theme-light .auth-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+.theme-dark .auth-input:-webkit-autofill,
+.theme-dark .auth-input:-webkit-autofill:hover,
+.theme-dark .auth-input:-webkit-autofill:focus,
+.theme-dark .auth-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
 .app-shell {
   transition:
     background-color 0.25s ease,

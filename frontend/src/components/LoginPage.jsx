@@ -1,13 +1,19 @@
 import React, { useState } from "react";
+import { useSignIn, useSignUp } from "@clerk/clerk-react";
 import { motion as Motion } from "framer-motion";
-import { AlertCircle, Cake, LockKeyhole, Mail, Moon, Sun, UserRound } from "lucide-react";
+import { AlertCircle, Cake, LockKeyhole, Mail, UserRound } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
-import { apiFetch } from "../utils/api";
+import ThemeToggle from "./ThemeToggle";
 import sidebarBadge from "../assets/expense-tracker-sidebar-badge.svg";
+import sidebarBadgeDark from "../assets/expense-tracker-sidebar-badge-dark.svg";
 import authBackground from "../assets/image.png";
+import authBackgroundDark from "../assets/image-copy.png";
 
 export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
+  const isDark = theme === "dark";
+  const { isLoaded: isSignInLoaded, signIn, setActive: setSignInActive } = useSignIn();
+  const { isLoaded: isSignUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
   const [mode, setMode] = useState("signin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -15,28 +21,60 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpDob, setSignUpDob] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const passwordChecks = {
+    minLength: signUpPassword.length >= 8,
+    hasUppercase: /[A-Z]/.test(signUpPassword),
+    hasLowercase: /[a-z]/.test(signUpPassword),
+  };
+  const isSignUpPasswordValid =
+    passwordChecks.minLength &&
+    passwordChecks.hasUppercase &&
+    passwordChecks.hasLowercase;
+
+  const formatClerkError = (clerkError, fallbackMessage) => {
+    const firstError = clerkError?.errors?.[0];
+    return (
+      firstError?.longMessage ||
+      firstError?.message ||
+      clerkError?.message ||
+      fallbackMessage
+    );
+  };
+
+  const resetSignUpFlow = () => {
+    setPendingVerification(false);
+    setVerificationCode("");
+    setError("");
+  };
+
   const handleSignIn = async (event) => {
     event.preventDefault();
+    if (!isSignInLoaded) {
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const response = await apiFetch("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
+      const result = await signIn.create({
+        identifier: username,
+        password,
       });
-      const result = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Login failed");
+      if (result.status !== "complete") {
+        throw new Error("Additional sign-in steps are required to continue.");
       }
 
-      onLoginSuccess(result.user);
+      await setSignInActive({ session: result.createdSessionId });
+      onLoginSuccess?.();
     } catch (submitError) {
-      setError(submitError.message || "Login failed");
+      setError(formatClerkError(submitError, "Login failed"));
     } finally {
       setLoading(false);
     }
@@ -44,28 +82,68 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   const handleSignUp = async (event) => {
     event.preventDefault();
+    if (!isSignUpLoaded) {
+      return;
+    }
+
+    if (!isSignUpPasswordValid) {
+      setError(
+        "Password must be at least 8 characters and include both uppercase and lowercase letters."
+      );
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const response = await apiFetch("/api/auth/signup", {
-        method: "POST",
-        body: JSON.stringify({
-          name: signUpName,
-          email: signUpEmail,
+      const [firstName, ...remainingName] = signUpName.trim().split(/\s+/);
+      await signUp.create({
+        emailAddress: signUpEmail,
+        password: signUpPassword,
+        firstName: firstName || undefined,
+        lastName: remainingName.join(" ") || undefined,
+        unsafeMetadata: {
           dob: signUpDob,
-          password: signUpPassword,
-        }),
+          fullName: signUpName,
+        },
       });
-      const result = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Sign up failed");
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+
+      setPendingVerification(true);
+      setVerificationCode("");
+    } catch (submitError) {
+      setError(formatClerkError(submitError, "Sign up failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async (event) => {
+    event.preventDefault();
+    if (!isSignUpLoaded) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await signUp.attemptEmailAddressVerification({
+        code: verificationCode,
+      });
+
+      if (result.status !== "complete") {
+        throw new Error("Verification is not complete yet. Please check the code and try again.");
       }
 
-      onLoginSuccess(result.user);
-    } catch (submitError) {
-      setError(submitError.message || "Sign up failed");
+      await setSignUpActive({ session: result.createdSessionId });
+      onLoginSuccess?.();
+    } catch (verificationError) {
+      setError(formatClerkError(verificationError, "Verification failed"));
     } finally {
       setLoading(false);
     }
@@ -73,57 +151,95 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   const loginCard = (
     <Motion.div
-      className="w-full max-w-lg rounded-[2rem] border border-white/40 bg-white/95 p-6 shadow-xl backdrop-blur sm:p-7"
+      className={`w-full max-w-2xl rounded-[1.35rem] p-5 shadow-xl backdrop-blur sm:p-6 ${
+        isDark
+          ? "border border-fuchsia-400/20 bg-slate-950/82 text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+          : "border border-white/40 bg-white/95"
+      }`}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
     >
-        <div className="mb-5 rounded-[1.75rem] bg-blue-50 p-5">
+        <div
+          className={`mb-5 rounded-[1rem] p-5 ${
+            isDark
+              ? "border border-fuchsia-400/15 bg-white/6"
+              : "bg-blue-50"
+          }`}
+        >
           <div className="flex items-start justify-between gap-4">
           <div>
-            <img
-              src={sidebarBadge}
-              alt="Expense Tracker logo"
-              className="h-14 w-auto max-w-[220px] object-contain"
-            />
-            <h1 className="mt-2 text-3xl font-bold">Sign in</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <div className="relative h-14 w-full max-w-[220px] overflow-hidden">
+              <Motion.img
+                src={sidebarBadge}
+                alt="Expense Tracker logo"
+                className="absolute inset-0 h-full w-full object-contain object-left px-1 py-1"
+                animate={{ opacity: theme === "dark" ? 0 : 1, scale: theme === "dark" ? 0.992 : 1 }}
+                transition={{ duration: 0.42, ease: "easeInOut" }}
+              />
+              <Motion.img
+                src={sidebarBadgeDark}
+                alt="Expense Tracker logo dark"
+                className="absolute inset-0 h-full w-full object-contain object-left px-1 py-1"
+                animate={{ opacity: theme === "dark" ? 1 : 0, scale: theme === "dark" ? 1 : 0.992 }}
+                transition={{ duration: 0.42, ease: "easeInOut" }}
+              />
+            </div>
+            <h1 className="mt-2 text-[1.85rem] font-bold leading-tight">Sign in</h1>
+            <p className={`mt-1.5 text-sm ${isDark ? "text-slate-300" : "text-gray-600"}`}>
               {mode === "signin"
-                ? "Sign in with your username or email and password."
-                : "Create a new account with your details."}
+                ? "Sign in with your email and password."
+                : pendingVerification
+                  ? "Enter the verification code sent to your email."
+                  : "Create a new account with your email and password."}
             </p>
           </div>
-          <button
-            type="button"
-            className="rounded-full p-2 hover:bg-gray-100 transition"
-            onClick={onToggleTheme}
+          <ThemeToggle
+            checked={theme === "dark"}
+            onChange={onToggleTheme}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          />
         </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 rounded-2xl bg-gray-100 p-1">
+        <div
+          className={`mb-4 grid grid-cols-2 rounded-xl p-1 ${
+            isDark ? "bg-white/8" : "bg-gray-100"
+          }`}
+        >
           <button
             type="button"
-            className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-              mode === "signin" ? "bg-white shadow" : "text-gray-600"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              mode === "signin"
+                ? isDark
+                  ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                  : "bg-white shadow"
+                : isDark
+                  ? "text-slate-300 hover:bg-white/6"
+                  : "text-gray-600"
             }`}
             onClick={() => {
               setMode("signin");
               setError("");
+              resetSignUpFlow();
             }}
           >
             Sign in
           </button>
           <button
             type="button"
-            className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-              mode === "signup" ? "bg-white shadow" : "text-gray-600"
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              mode === "signup"
+                ? isDark
+                  ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                  : "bg-white shadow"
+                : isDark
+                  ? "text-slate-300 hover:bg-white/6"
+                  : "text-gray-600"
             }`}
             onClick={() => {
               setMode("signup");
               setError("");
+              resetSignUpFlow();
             }}
           >
             Sign up
@@ -131,32 +247,52 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
         </div>
 
         {mode === "signin" ? (
-          <form className="space-y-4" onSubmit={handleSignIn}>
+          <form className="space-y-3.5" onSubmit={handleSignIn}>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">Username or Email</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <UserRound size={18} className="text-gray-500" />
+              <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Email</span>
+              <div
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                  isDark
+                    ? "border border-white/12 bg-black/20"
+                    : "border"
+                }`}
+              >
+                <UserRound size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
                 <input
                   type="text"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Username"
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
+                  placeholder="Email"
+                  className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                    isDark
+                      ? "text-white caret-white placeholder:text-slate-500"
+                      : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                  }`}
                   autoComplete="username"
                 />
               </div>
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">Password</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <LockKeyhole size={18} className="text-gray-500" />
+              <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Password</span>
+              <div
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                  isDark
+                    ? "border border-white/12 bg-black/20"
+                    : "border"
+                }`}
+              >
+                <LockKeyhole size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
                 <input
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Password"
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
+                  className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                    isDark
+                      ? "text-white caret-white placeholder:text-slate-500"
+                      : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                  }`}
                   autoComplete="current-password"
                 />
               </div>
@@ -172,99 +308,228 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-2xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Login"}
             </button>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={handleSignUp}>
-            <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Name</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <UserRound size={18} className="text-gray-500" />
-                <input
-                  type="text"
-                  value={signUpName}
-                  onChange={(event) => setSignUpName(event.target.value)}
-                  placeholder="Full name"
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
-                  autoComplete="name"
-                />
+          pendingVerification ? (
+            <form className="space-y-3.5" onSubmit={handleVerifyEmail}>
+              <div
+                className={`rounded-xl px-4 py-3 text-sm ${
+                  isDark
+                    ? "border border-white/10 bg-white/6 text-slate-200"
+                    : "border border-slate-200 bg-slate-50 text-slate-700"
+                }`}
+              >
+                <p className="font-medium">Check your email</p>
+                <p className="mt-1">
+                  We sent a verification code to <span className="font-semibold">{signUpEmail}</span>.
+                </p>
               </div>
-            </label>
 
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Email</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <Mail size={18} className="text-gray-500" />
-                <input
-                  type="email"
-                  value={signUpEmail}
-                  onChange={(event) => setSignUpEmail(event.target.value)}
-                  placeholder="Email"
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
-                  autoComplete="email"
-                />
+              <label className="block">
+                <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Verification code</span>
+                <div
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                    isDark
+                      ? "border border-white/12 bg-black/20"
+                      : "border"
+                  }`}
+                >
+                  <Mail size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(event) => setVerificationCode(event.target.value)}
+                    placeholder="Enter code"
+                    className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                      isDark
+                        ? "text-white caret-white placeholder:text-slate-500"
+                        : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                    }`}
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </label>
+
+              {error ? (
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Verifying..." : "Verify email"}
+                </button>
+                <button
+                  type="button"
+                  className={`w-full rounded-xl px-4 py-2.5 font-semibold transition ${
+                    isDark
+                      ? "border border-white/12 bg-white/6 text-slate-100 hover:bg-white/10"
+                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={resetSignUpFlow}
+                >
+                  Use another email
+                </button>
               </div>
-            </label>
+            </form>
+          ) : (
+            <form className="space-y-3.5" onSubmit={handleSignUp}>
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Name</span>
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                        isDark
+                          ? "border border-white/12 bg-black/20"
+                          : "border"
+                      }`}
+                    >
+                      <UserRound size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                      <input
+                        type="text"
+                        value={signUpName}
+                        onChange={(event) => setSignUpName(event.target.value)}
+                        placeholder="Full name"
+                        className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                          isDark
+                            ? "text-white caret-white placeholder:text-slate-500"
+                            : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                        }`}
+                        autoComplete="name"
+                      />
+                    </div>
+                  </label>
 
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Date of Birth</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <Cake size={18} className="text-gray-500" />
-                <input
-                  type="date"
-                  value={signUpDob}
-                  onChange={(event) => setSignUpDob(event.target.value)}
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
-                />
+                  <label className="block">
+                    <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Email</span>
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                        isDark
+                          ? "border border-white/12 bg-black/20"
+                          : "border"
+                      }`}
+                    >
+                      <Mail size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                      <input
+                        type="email"
+                        value={signUpEmail}
+                        onChange={(event) => setSignUpEmail(event.target.value)}
+                        placeholder="Email"
+                        className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                          isDark
+                            ? "text-white caret-white placeholder:text-slate-500"
+                            : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                        }`}
+                        autoComplete="email"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block">
+                    <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Date of Birth</span>
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                        isDark
+                          ? "border border-white/12 bg-black/20"
+                          : "border"
+                      }`}
+                    >
+                      <Cake size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                      <input
+                        type="date"
+                        value={signUpDob}
+                        onChange={(event) => setSignUpDob(event.target.value)}
+                        className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                          isDark ? "text-white caret-white" : "text-slate-900 caret-slate-900"
+                        }`}
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block">
+                    <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Password</span>
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                        isDark
+                          ? "border border-white/12 bg-black/20"
+                          : "border"
+                      }`}
+                    >
+                      <LockKeyhole size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                      <input
+                        type="password"
+                        value={signUpPassword}
+                        onChange={(event) => setSignUpPassword(event.target.value)}
+                        placeholder="Password"
+                        className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                          isDark
+                            ? "text-white caret-white placeholder:text-slate-500"
+                            : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                        }`}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div
+                  className={`rounded-xl px-3 py-3 text-sm lg:sticky lg:top-0 ${
+                    isDark
+                      ? "border border-white/10 bg-white/6 text-slate-200"
+                      : "border border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <p className="font-medium">Password must:</p>
+                  <p className={passwordChecks.minLength ? "text-green-500" : ""}>
+                    Be at least 8 characters long
+                  </p>
+                  <p className={passwordChecks.hasUppercase ? "text-green-500" : ""}>
+                    Include at least one uppercase letter
+                  </p>
+                  <p className={passwordChecks.hasLowercase ? "text-green-500" : ""}>
+                    Include at least one lowercase letter
+                  </p>
+                </div>
               </div>
-            </label>
 
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Password</span>
-              <div className="flex items-center gap-2 rounded-2xl border px-3 py-2.5">
-                <LockKeyhole size={18} className="text-gray-500" />
-                <input
-                  type="password"
-                  value={signUpPassword}
-                  onChange={(event) => setSignUpPassword(event.target.value)}
-                  placeholder="Password"
-                  className="w-full border-0 bg-transparent p-0 focus:outline-none"
-                  autoComplete="new-password"
-                />
-              </div>
-            </label>
-            </div>
+              {error ? (
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              ) : null}
 
-            {error ? (
-              <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-2xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Creating account..." : "Create account"}
+              </button>
+            </form>
+          )
         )}
     </Motion.div>
   );
 
   return (
     <div
-      className={`relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 ${
+      className={`relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 sm:py-5 ${
         theme === "dark" ? "theme-dark" : "theme-light"
       }`}
       style={{
-        backgroundImage: `url(${authBackground})`,
+        backgroundImage: `url(${theme === "dark" ? authBackgroundDark : authBackground})`,
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",

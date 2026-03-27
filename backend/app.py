@@ -1,7 +1,5 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pymongo import MongoClient
-from pymongo.errors import PyMongoError
 import sys
 import cv2
 import numpy as np
@@ -20,7 +18,6 @@ from collections import defaultdict
 from models import EnhancedExpenseClassifier
 import pdfplumber
 import PyPDF2
-from werkzeug.security import check_password_hash, generate_password_hash
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -41,101 +38,6 @@ CORS(
 # In-memory storage for expenses (replace with database in production)
 expenses_db = []
 expense_id_counter = 1
-
-MONGO_URI = os.environ.get(
-    'MONGO_URI',
-    'mongodb+srv://bhumik:8178307875@khaana-khazana.iopbml0.mongodb.net/'
-)
-MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'EXPENSE')
-
-SEED_USER = {
-    'username': 'bhumik',
-    'name': 'Bhumik',
-    'email': 'bhumik@example.com',
-    'dob': '2000-01-01',
-    'password': 'bhumik'
-}
-
-mongo_client = None
-users_collection = None
-
-
-def serialize_user(user_doc):
-    """Return a user document without sensitive fields."""
-    return {
-        'id': str(user_doc.get('_id', '')),
-        'username': user_doc.get('username', ''),
-        'name': user_doc.get('name', ''),
-        'email': user_doc.get('email', ''),
-        'dob': user_doc.get('dob', '')
-    }
-
-
-def get_users_collection():
-    """Get the MongoDB users collection and ensure indexes/seed data exist."""
-    global mongo_client, users_collection
-
-    if users_collection is not None:
-        return users_collection
-
-    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    database = mongo_client[MONGO_DB_NAME]
-    users_collection = database['users']
-    users_collection.create_index('email', unique=True)
-    users_collection.create_index('username', unique=True)
-    ensure_seed_user()
-    return users_collection
-
-
-def ensure_seed_user():
-    """Ensure the initial Bhumik account exists in MongoDB."""
-    if users_collection is None:
-        return
-
-    existing_user = users_collection.find_one({'email': SEED_USER['email']})
-    if existing_user:
-        return
-
-    users_collection.insert_one({
-        'username': SEED_USER['username'],
-        'name': SEED_USER['name'],
-        'email': SEED_USER['email'],
-        'dob': SEED_USER['dob'],
-        'password_hash': generate_password_hash(SEED_USER['password']),
-        'created_at': datetime.utcnow().isoformat()
-    })
-
-
-def get_current_user():
-    """Load the authenticated user from the current session."""
-    username = session.get('username')
-    if not username:
-        return None
-
-    try:
-        collection = get_users_collection()
-        return collection.find_one({'username': username})
-    except PyMongoError as error:
-        print(f"MongoDB session lookup failed: {error}")
-        return None
-
-
-def is_authenticated():
-    return get_current_user() is not None
-
-
-def generate_username_from_email(email):
-    """Create a username from the email local part and keep it unique."""
-    base_username = re.sub(r'[^a-z0-9]+', '', email.split('@')[0].lower()) or 'user'
-    candidate = base_username
-    suffix = 1
-    collection = get_users_collection()
-
-    while collection.find_one({'username': candidate}):
-        suffix += 1
-        candidate = f"{base_username}{suffix}"
-
-    return candidate
 
 # Configure Tesseract path (update this path based on your installation)
 # For Windows, try these common paths:
@@ -1670,143 +1572,6 @@ class BillExtractor:
 
 # Initialize the bill extractor
 bill_extractor = BillExtractor()
-
-@app.route('/api/auth/session', methods=['GET'])
-def auth_session():
-    """Return the currently authenticated user session."""
-    user = get_current_user()
-    if not user:
-        return jsonify({
-            'authenticated': False,
-            'user': None
-        }), 401
-
-    return jsonify({
-        'authenticated': True,
-        'user': serialize_user(user)
-    })
-
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    """Authenticate a user from MongoDB."""
-    data = request.json or {}
-    identifier = str(data.get('username', '')).strip().lower()
-    password = str(data.get('password', ''))
-
-    if not identifier or not password:
-        return jsonify({
-            'success': False,
-            'error': 'Username/email and password are required'
-        }), 400
-
-    try:
-        collection = get_users_collection()
-        user = collection.find_one({
-            '$or': [
-                {'username': identifier},
-                {'email': identifier}
-            ]
-        })
-    except PyMongoError as error:
-        return jsonify({
-            'success': False,
-            'error': f'Unable to connect to MongoDB: {error}'
-        }), 500
-
-    if not user or not check_password_hash(user.get('password_hash', ''), password):
-        return jsonify({
-            'success': False,
-            'error': 'Invalid username or password'
-        }), 401
-
-    session['username'] = user['username']
-
-    return jsonify({
-        'success': True,
-        'message': 'Login successful',
-        'user': serialize_user(user)
-    })
-
-
-@app.route('/api/auth/signup', methods=['POST'])
-def signup():
-    """Create a new user in MongoDB and start a session."""
-    data = request.json or {}
-    name = str(data.get('name', '')).strip()
-    email = str(data.get('email', '')).strip().lower()
-    dob = str(data.get('dob', '')).strip()
-    password = str(data.get('password', ''))
-
-    if not name or not email or not dob or not password:
-        return jsonify({
-            'success': False,
-            'error': 'Name, email, date of birth, and password are required'
-        }), 400
-
-    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
-        return jsonify({
-            'success': False,
-            'error': 'Please enter a valid email address'
-        }), 400
-
-    try:
-        datetime.strptime(dob, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({
-            'success': False,
-            'error': 'Date of birth must be in YYYY-MM-DD format'
-        }), 400
-
-    if len(password) < 4:
-        return jsonify({
-            'success': False,
-            'error': 'Password must be at least 4 characters long'
-        }), 400
-
-    try:
-        collection = get_users_collection()
-        if collection.find_one({'email': email}):
-            return jsonify({
-                'success': False,
-                'error': 'An account with this email already exists'
-            }), 409
-
-        username = generate_username_from_email(email)
-        user_doc = {
-            'username': username,
-            'name': name,
-            'email': email,
-            'dob': dob,
-            'password_hash': generate_password_hash(password),
-            'created_at': datetime.utcnow().isoformat()
-        }
-        inserted = collection.insert_one(user_doc)
-        user_doc['_id'] = inserted.inserted_id
-    except PyMongoError as error:
-        return jsonify({
-            'success': False,
-            'error': f'Unable to create account in MongoDB: {error}'
-        }), 500
-
-    session['username'] = username
-
-    return jsonify({
-        'success': True,
-        'message': 'Account created successfully',
-        'user': serialize_user(user_doc)
-    })
-
-
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    """Clear the current session."""
-    session.clear()
-    return jsonify({
-        'success': True,
-        'message': 'Logged out successfully'
-    })
-
 
 @app.route('/api/process-bill', methods=['POST'])
 def process_bill():

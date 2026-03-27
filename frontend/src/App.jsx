@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
@@ -7,13 +8,13 @@ import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import LoginPage from "./components/LoginPage";
 import { ThemeContext } from "./components/ThemeContext";
-import { apiFetch } from "./utils/api";
 
 export default function App() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+  const { user: clerkUser } = useUser();
   const [page, setPage] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") {
       return "light";
@@ -33,45 +34,6 @@ export default function App() {
     };
   }, [theme]);
 
-  useEffect(() => {
-    let active = true;
-
-    const fetchSession = async () => {
-      try {
-        const response = await apiFetch("/api/auth/session", {
-          method: "GET",
-          headers: {},
-        });
-
-        if (!active) {
-          return;
-        }
-
-        if (!response.ok) {
-          setUser(null);
-          return;
-        }
-
-        const result = await response.json();
-        setUser(result.user || null);
-      } catch {
-        if (active) {
-          setUser(null);
-        }
-      } finally {
-        if (active) {
-          setAuthLoading(false);
-        }
-      }
-    };
-
-    fetchSession();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
   };
@@ -81,24 +43,28 @@ export default function App() {
     setSidebarOpen(false);
   };
 
-  const handleLoginSuccess = (nextUser) => {
-    setUser(nextUser);
+  const handleLoginSuccess = () => {
     setPage("Dashboard");
   };
 
   const handleLogout = async () => {
-    try {
-      await apiFetch("/api/auth/logout", {
-        method: "POST",
-      });
-    } catch {
-      // Clear the local auth state even if the request fails.
-    } finally {
-      setUser(null);
-      setPage("Dashboard");
-      setSidebarOpen(false);
-    }
+    await signOut();
+    setPage("Dashboard");
+    setSidebarOpen(false);
   };
+
+  const user = clerkUser
+    ? {
+        id: clerkUser.id,
+        username:
+          clerkUser.username ||
+          clerkUser.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+          "user",
+        name: clerkUser.fullName || clerkUser.firstName || "User",
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        dob: clerkUser.unsafeMetadata?.dob || "",
+      }
+    : null;
 
   let content;
   if (page === "Dashboard") content = <Dashboard />;
@@ -108,7 +74,7 @@ export default function App() {
     content = <Settings user={user} onLogout={handleLogout} />;
   }
 
-  if (authLoading) {
+  if (!isLoaded) {
     return (
       <div
         className={`flex min-h-screen items-center justify-center ${
@@ -120,7 +86,7 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!isSignedIn || !user) {
     return (
       <ThemeContext.Provider value={{ theme }}>
         <LoginPage
