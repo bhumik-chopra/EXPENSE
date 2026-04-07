@@ -16,3 +16,34 @@ export async function apiFetch(path, options = {}) {
 
   return response;
 }
+
+export async function processReceiptFile(file) {
+  const formData = new FormData();
+  formData.append(file.type === "application/pdf" ? "pdf" : "image", file);
+
+  const response = await apiFetch("/api/process-bill", {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed with status ${response.status}`);
+  }
+
+  return payload;
+}
+
+export async function createExpense(expenseData) {
+  const response = await apiFetch("/api/expenses", {
+    method: "POST",
+    body: JSON.stringify(expenseData),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed with status ${response.status}`);
+  }
+
+  return payload;
+}

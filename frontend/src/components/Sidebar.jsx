@@ -26,7 +26,7 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
         />
       )}
       <Motion.aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[82vw] flex-col bg-white py-6 shadow-md transition-transform duration-300 md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[82vw] flex-col bg-white py-6 shadow-md transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         initial={{ opacity: 0, x: -24 }}
@@ -34,7 +34,7 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
         transition={{ duration: 0.35 }}
       >
         <div className="mb-8 px-6 pt-10 md:pt-0">
-          <div className="relative h-16 w-full max-w-[220px] overflow-hidden rounded-2xl">
+          <div className="relative h-16 w-full max-w-[196px] overflow-hidden rounded-2xl">
             <Motion.img
               src={sidebarBadge}
               alt="Expense Tracker"

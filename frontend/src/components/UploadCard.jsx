@@ -1,223 +1,255 @@
 import React, { useRef, useState } from "react";
-import { UploadCloud, CheckCircle, AlertCircle, Calendar, Clock, FileText, Image, Edit3, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Edit3,
+  FileText,
+  Image,
+  Plus,
+  Sparkles,
+  UploadCloud,
+} from "lucide-react";
 import { motion as Motion } from "framer-motion";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
-import { getCurrentLocalDate, formatDisplayDate } from '../utils/dateUtils';
+import { createExpense, processReceiptFile } from "../utils/api";
+import { getCurrentLocalDate } from "../utils/dateUtils";
 
+const defaultCategories = [
+  "Food & Dining",
+  "Shopping",
+  "Transportation",
+  "Bills & Utilities",
+  "Healthcare",
+  "Entertainment",
+  "Travel",
+  "Education",
+  "Groceries",
+  "Other",
+];
+
+const emptyManualData = () => ({
+  amount: "",
+  category: "",
+  date: getCurrentLocalDate(),
+  items: [],
+  currency: "INR",
+});
+
+const inferAmountFromExtractedText = (text, fallbackAmount) => {
+  const cleanText = String(text || "").trim();
+  const numericFallback = Number(fallbackAmount);
+  if (!cleanText) return Number.isFinite(numericFallback) ? numericFallback : 0;
+
+  const lines = cleanText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const parseAmounts = (line) =>
+    [...line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2})/g)]
+      .map((match) => Number(match[0].replace(/,/g, "")))
+      .filter((value) => Number.isFinite(value) && value > 0);
+
+  const grandTotalLine = lines.find((line) => /grand\s+total|net\s+total|amount\s+due/i.test(line));
+  if (grandTotalLine) {
+    const values = parseAmounts(grandTotalLine);
+    if (values.length) return values[values.length - 1];
+  }
+
+  let subtotal = 0;
+  let taxTotal = 0;
+  let roundOff = 0;
+  let rowCount = 0;
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    const values = parseAmounts(line);
+    if (!values.length) continue;
+
+    if (/grand\s+total|net\s+total|amount\s+due/i.test(lower)) {
+      return values[values.length - 1];
+    }
+
+    if (/\btotal\b/.test(lower) && !/subtotal|grand total/i.test(lower)) {
+      const candidate = values[values.length - 1];
+      if (!Number.isFinite(numericFallback) || candidate > numericFallback) {
+        return candidate;
+      }
+    }
+
+    if (/cgst|sgst|igst|vat|tax|service charge|service tax/i.test(lower)) {
+      taxTotal += Math.max(...values);
+      continue;
+    }
+
+    if (/round off/i.test(lower)) {
+      roundOff += Math.max(...values);
+      continue;
+    }
+
+    if (/[a-z]/i.test(line) && values.length >= 2) {
+      subtotal += values[values.length - 1];
+      rowCount += 1;
+    }
+  }
+
+  const rowTotal = rowCount >= 3 ? subtotal + taxTotal + roundOff : 0;
+  if (rowTotal > 0 && (!Number.isFinite(numericFallback) || rowTotal > numericFallback * 2)) {
+    return Number(rowTotal.toFixed(2));
+  }
+
+  return Number.isFinite(numericFallback) ? numericFallback : 0;
+};
 
 export default function UploadCard() {
   const { theme } = useTheme();
-  const [extractedData, setExtractedData] = useState(null);
+  const fileInput = useRef(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const [fileType, setFileType] = useState(null);
+  const [error, setError] = useState("");
   const [manualEntry, setManualEntry] = useState(false);
-  const [manualData, setManualData] = useState({
-    vendor: '',
-    amount: '',
-    category: '',
-    date: getCurrentLocalDate(),
-    items: []
-  });
-  const fileInput = useRef();
+  const [fileType, setFileType] = useState(null);
+  const [extractedData, setExtractedData] = useState(null);
+  const [editableData, setEditableData] = useState(null);
+  const [manualData, setManualData] = useState(emptyManualData);
 
-  const categories = [
-    'Food & Dining',
-    'Shopping',
-    'Transportation',
-    'Bills & Utilities',
-    'Healthcare',
-    'Entertainment',
-    'Travel',
-    'Education',
-    'Groceries',
-    'Other'
-  ];
+  const resetProcessedReceipt = () => {
+    setExtractedData(null);
+    setEditableData(null);
+    setFileType(null);
+  };
 
   const handleFile = async (file) => {
     if (!file) return;
-    
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'application/pdf'];
+
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/bmp",
+      "application/pdf",
+    ];
+
     if (!validTypes.includes(file.type)) {
-      setError('Please upload an image file (JPEG, PNG, GIF, BMP) or PDF document');
+      setError("Please upload a receipt image or a PDF invoice.");
       return;
     }
-    
+
     setLoading(true);
+    setSaved(false);
     setError("");
-    setExtractedData(null);
+    setManualEntry(false);
+    resetProcessedReceipt();
     setFileType(file.type);
 
     try {
-      // Create FormData to send file to backend
-      const formData = new FormData();
-      formData.append(file.type === 'application/pdf' ? 'pdf' : 'image', file);
-
-      // Call the ML backend API
-      const response = await fetch('http://localhost:5000/api/process-bill', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          // Don't set Content-Type, let browser set it with boundary for FormData
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        if (result.manual_entry_required) {
-          // Handle manual entry case
-          setExtractedData({
-            ...result,
-            vendor: 'Enter vendor name',
-            amount: 0,
-            category: 'Select category',
-            date: getCurrentLocalDate(),
-            items: ['Manual entry required - Install Tesseract OCR for automatic extraction']
-          });
-          setError('⚠️ Tesseract OCR not installed. Please enter details manually or install Tesseract for automatic extraction.');
-        } else {
-          // Normal OCR extraction
-          setExtractedData(result);
-          setError(null);
-        }
-      } else {
-        setError(result.error || 'Failed to process bill');
-      }
-    } catch (err) {
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setError('❌ Cannot connect to ML backend. Please check:\n• Backend server is running on http://localhost:5000\n• No firewall is blocking the connection\n• Try refreshing the page');
-      } else if (err.message.includes('HTTP error')) {
-        setError(`❌ Backend error: ${err.message}\nCheck the backend console for details.`);
-      } else {
-        setError(`❌ Upload failed: ${err.message}`);
-      }
-      console.error('Upload error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddToExpenses = async () => {
-    const dataToSave = manualEntry ? manualData : extractedData;
-    if (!dataToSave) return;
-    
-    // Validate manual entry fields
-    if (manualEntry) {
-      if (!manualData.vendor.trim()) {
-        setError('Please enter vendor name');
-        return;
-      }
-      if (!manualData.amount || manualData.amount <= 0) {
-        setError('Please enter a valid amount');
-        return;
-      }
-      if (!manualData.category) {
-        setError('Please select a category');
-        return;
-      }
-    }
-    
-    try {
-      setLoading(true);
-      setError("");
-      
-      // Create expense object with validated date
-      const rawDate = dataToSave.date || dataToSave.dates?.[0];
-      let validDate = getCurrentLocalDate(); // Default to current date
-      
-      if (rawDate && rawDate !== 'Invalid Date' && rawDate !== '') {
-        // Clean the date string - remove time if present
-        const cleanDate = String(rawDate).split(' ')[0];
-        
-        // Validate the date format
-        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
-          const testDate = new Date(cleanDate);
-          if (!isNaN(testDate.getTime())) {
-            validDate = cleanDate;
-          }
-        }
-      }
-      
-      const expenseData = {
-        vendor: dataToSave.vendor,
-        amount: parseFloat(dataToSave.amount) || dataToSave.total_amount,
-        currency: dataToSave.currency || 'INR',
-        category: dataToSave.category,
-        date: validDate,
-        items: dataToSave.items || []
+      const result = await processReceiptFile(file);
+      const resolvedAmount = inferAmountFromExtractedText(
+        result.extracted_text || "",
+        result.amount || result.total_amount || 0
+      );
+      const normalized = {
+        amount: resolvedAmount,
+        currency: result.currency || "INR",
+        category: result.category || "Other",
+        date: result.date || getCurrentLocalDate(),
+        items: result.items || [],
+        extracted_text: result.extracted_text || "",
+        ocr_backend: result.ocr_backend || "unknown",
+        confidence: result.confidence ?? 0,
+        manual_entry_required: Boolean(result.manual_entry_required),
+        message: result.message || "",
+        file_type: result.file_type || (file.type === "application/pdf" ? "pdf" : "image"),
+        filename: result.filename || file.name,
+        source: result.source || "ocr",
       };
-      
-      // Send to backend
-      const response = await fetch('http://localhost:5000/api/expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(expenseData)
+
+      setExtractedData(normalized);
+      setEditableData({
+        amount: normalized.amount || "",
+        currency: normalized.currency,
+        category: normalized.category,
+        date: normalized.date || getCurrentLocalDate(),
+        items: normalized.items,
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        setSaved(true);
-        
-        // Trigger refresh of expenses list and charts
-        window.dispatchEvent(new CustomEvent('expenseAdded', { detail: result.expense }));
-        
-        // Show success message and reset
-        setTimeout(() => {
-          setSaved(false);
-          setExtractedData(null);
-          if (manualEntry) {
-            setManualData({
-              vendor: '',
-              amount: '',
-              category: '',
-              date: getCurrentLocalDate(),
-              items: []
-            });
-            setManualEntry(false);
-          }
-        }, 2000);
-      } else {
-        throw new Error(result.error || 'Failed to save expense');
+      if (normalized.manual_entry_required) {
+        setError(normalized.message || "We couldn't fill everything automatically. Please review the details.");
       }
-      
     } catch (err) {
-      setError(`Failed to save expense: ${err.message}`);
+      setError(err.message || "Failed to process the receipt.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualEntryToggle = () => {
-    setManualEntry(!manualEntry);
-    setExtractedData(null);
+  const handleSaveExpense = async () => {
+    const activeData = manualEntry ? manualData : editableData;
+    if (!activeData) return;
+
+    const amount = Number(activeData.amount);
+    const category = String(activeData.category || "").trim();
+    const date = String(activeData.date || getCurrentLocalDate()).trim();
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Please enter a valid amount greater than 0.");
+      return;
+    }
+    if (!category) {
+      setError("Please select a category.");
+      return;
+    }
+
+    setLoading(true);
     setError("");
-    if (!manualEntry) {
-      setManualData({
-        vendor: '',
-        amount: '',
-        category: '',
-        date: getCurrentLocalDate(),
-        items: []
-      });
+
+    try {
+      const payload = {
+        vendor: "Expense",
+        amount,
+        currency: activeData.currency || "INR",
+        category,
+        date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getCurrentLocalDate(),
+        items: manualEntry ? activeData.items || [] : activeData.items || [],
+      };
+
+      const result = await createExpense(payload);
+      setSaved(true);
+      window.dispatchEvent(new CustomEvent("expenseAdded", { detail: result.expense }));
+
+      setTimeout(() => {
+        setSaved(false);
+        setError("");
+        if (manualEntry) {
+          setManualData(emptyManualData());
+        } else {
+          resetProcessedReceipt();
+        }
+      }, 1800);
+    } catch (err) {
+      setError(err.message || "Failed to save expense.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+  const toggleManualEntry = () => {
+    setManualEntry((current) => !current);
+    setSaved(false);
+    setError("");
+    resetProcessedReceipt();
+    setManualData(emptyManualData());
+  };
+
+  const onDrop = (event) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      handleFile(file);
+    }
   };
 
   const cardContent = (
@@ -226,330 +258,193 @@ export default function UploadCard() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      {/* System Status and Date Info */}
-      <div className="mb-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">Current Date</span>
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Sparkles size={16} />
+            <span className="text-sm font-semibold">Receipt Import</span>
           </div>
-          <span className="text-sm text-blue-700 font-semibold">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'short',
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            })}
-          </span>
+          <span className="text-xs font-medium text-blue-700">{getCurrentLocalDate()}</span>
         </div>
-        <p className="text-xs text-blue-600 mt-1">
-          📅 Today: {getCurrentLocalDate()} | 
-          Receipts without a detected date Model will use today's date by default.
+        <p className="mt-1 text-xs text-blue-700">
+          Upload a receipt image or PDF to extract the details and save it as an expense.
         </p>
       </div>
-      
-      {/* Manual Entry Toggle */}
-      <div className="flex justify-center mb-4">
+
+      <div className="flex justify-center">
         <button
-          onClick={handleManualEntryToggle}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-            manualEntry 
-              ? 'bg-orange-100 text-orange-700 border border-orange-200' 
-              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+          onClick={toggleManualEntry}
+          className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition ${
+            manualEntry
+              ? "border-orange-200 bg-orange-100 text-orange-700"
+              : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
           }`}
         >
-          {manualEntry ? (
-            <>
-              <UploadCloud size={16} />
-              Switch to File Upload
-            </>
-          ) : (
-            <>
-              <Edit3 size={16} />
-              Manual Entry
-            </>
-          )}
+          {manualEntry ? <UploadCloud size={16} /> : <Edit3 size={16} />}
+          {manualEntry ? "Switch to File Upload" : "Manual Entry"}
         </button>
       </div>
 
-      {/* Manual Entry Form */}
-      {manualEntry && (
-        <div className="space-y-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
-          <div className="flex items-center gap-2 text-orange-700 mb-4">
+      {manualEntry ? (
+        <div className="space-y-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+          <div className="flex items-center gap-2 text-orange-700">
             <Plus size={16} />
             <span className="font-semibold">Add Expense Manually</span>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Vendor Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vendor Name *
-              </label>
-              <input
-                type="text"
-                value={manualData.vendor}
-                onChange={(e) => setManualData(prev => ({...prev, vendor: e.target.value}))}
-                placeholder="Enter vendor/store name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            {/* Amount Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount (₹) *
-              </label>
-              <input
-                type="number"
-                value={manualData.amount}
-                onChange={(e) => setManualData(prev => ({...prev, amount: e.target.value}))}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            {/* Category Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category *
-              </label>
-              <select
-                value={manualData.category}
-                onChange={(e) => setManualData(prev => ({...prev, category: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select category</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Date Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
-              </label>
-              <input
-                type="date"
-                value={manualData.date}
-                onChange={(e) => setManualData(prev => ({...prev, date: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <LabeledInput
+              label="Amount"
+              type="number"
+              value={manualData.amount}
+              onChange={(value) => setManualData((current) => ({ ...current, amount: value }))}
+              placeholder="0.00"
+            />
+            <LabeledSelect
+              label="Category"
+              value={manualData.category}
+              onChange={(value) => setManualData((current) => ({ ...current, category: value }))}
+              options={defaultCategories}
+            />
+            <LabeledInput
+              label="Date"
+              type="date"
+              value={manualData.date}
+              readOnly
+              disabled
+            />
           </div>
-          
-          {/* Add Button for Manual Entry */}
-          <button 
-            onClick={handleAddToExpenses}
-            disabled={loading || saved || !manualData.vendor.trim() || !manualData.amount || !manualData.category}
-            className={`w-full py-2 px-4 rounded transition ${
-              saved 
-                ? 'bg-green-600 text-white' 
-                : 'bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed'
-            }`}
+          <button
+            onClick={handleSaveExpense}
+            disabled={loading || saved}
+            className={`w-full rounded px-4 py-2 text-white transition ${
+              saved ? "bg-green-600" : "bg-orange-600 hover:bg-orange-700"
+            } ${loading ? "cursor-not-allowed opacity-60" : ""}`}
           >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                Saving...
-              </div>
-            ) : saved ? (
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle size={16} />
-                Added Successfully!
-              </div>
-            ) : (
-              'Add Manual Expense'
-            )}
+            {saved ? "Added Successfully" : loading ? "Saving..." : "Add Manual Expense"}
           </button>
         </div>
-      )}
-      
-      {/* File Upload Area */}
-      {!manualEntry && (
+      ) : (
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center h-40 cursor-pointer hover:border-blue-400 transition"
+          className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition hover:border-blue-400"
           onDrop={onDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => fileInput.current.click()}
+          onDragOver={(event) => event.preventDefault()}
+          onClick={() => fileInput.current?.click()}
         >
-          <div className="flex items-center gap-3 mb-3">
+          <div className="mb-3 flex items-center gap-3">
             <Image size={28} className="text-blue-400" />
             <FileText size={28} className="text-red-400" />
           </div>
-          <UploadCloud size={32} className="text-gray-400 mb-2" />
-          <span className="text-gray-600 font-medium">Upload Invoice or Receipt</span>
-          <span className="text-gray-500 text-sm">Support: Images (JPG, PNG) & PDF documents</span>
-          <input 
-            type="file" 
-            ref={fileInput} 
-            className="hidden" 
+          <UploadCloud size={32} className="mb-2 text-gray-400" />
+          <span className="font-medium text-gray-700">Upload Invoice or Receipt</span>
+          <span className="text-sm text-gray-500">Supports JPG, PNG, BMP, GIF, and PDF</span>
+          <input
+            ref={fileInput}
+            type="file"
+            className="hidden"
             accept="image/*,application/pdf"
-            onChange={e => handleFile(e.target.files[0])} 
+            onChange={(event) => handleFile(event.target.files?.[0])}
           />
         </div>
       )}
-      
-      {/* Status Messages */}
+
       {loading && (
-        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded">
-          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-          <span>
-            Processing {fileType === 'application/pdf' ? 'PDF invoice' : 'image'} with ML...
-            {fileType === 'application/pdf' && ' 📄'}
-            {fileType?.startsWith('image/') && ' 🖼️'}
-          </span>
+        <div className="flex items-center gap-2 rounded bg-blue-50 p-3 text-blue-700">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <span>Processing {fileType === "application/pdf" ? "PDF" : "receipt image"}...</span>
         </div>
       )}
-      
+
       {error && (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded">
-          <AlertCircle size={16} />
+        <div className="flex items-start gap-2 rounded bg-red-50 p-3 text-red-700">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
-      
-      {/* Success notification */}
+
       {saved && (
-        <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded border border-green-200">
-          <CheckCircle size={16} />
-          <div>
-            <span className="font-semibold">Expense saved successfully!</span>
-            <p className="text-sm text-green-700">
-              ₹{(manualEntry ? parseFloat(manualData.amount) : (extractedData?.total_amount || extractedData?.amount))?.toFixed(2)} expense from {manualEntry ? manualData.vendor : extractedData?.vendor} has been added to your records.
-            </p>
-          </div>
+        <div className="flex items-start gap-2 rounded border border-green-200 bg-green-50 p-3 text-green-700">
+          <CheckCircle size={16} className="mt-0.5 shrink-0" />
+          <span>Expense saved successfully.</span>
         </div>
       )}
-      
-      {/* Extracted Data Display */}
-      {extractedData && !manualEntry && (
+
+      {editableData && !manualEntry && extractedData && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-green-600">
-            <CheckCircle size={16} />
-            <span className="font-semibold">Bill processed successfully!</span>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded p-3">
-              <h3 className="font-semibold text-sm text-gray-700 mb-2">Vendor</h3>
-              <p className="text-sm">{extractedData.vendor}</p>
-            </div>
-            
-            <div className="bg-gray-50 rounded p-3">
-              <h3 className="font-semibold text-sm text-gray-700 mb-2">Total Amount</h3>
-              <p className="text-lg font-bold text-green-600">
-                ₹{(extractedData.amount || extractedData.total_amount || 0).toFixed(2)}
-              </p>
-              {extractedData.currency && (
-                <p className="text-xs text-gray-500">{extractedData.currency}</p>
-              )}
-            </div>
-            
-            <div className="bg-gray-50 rounded p-3">
-              <h3 className="font-semibold text-sm text-gray-700 mb-2">Category</h3>
-              <p className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded inline-block">
-                {extractedData.category}
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 rounded p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar size={16} className="text-gray-600" />
-                <h3 className="font-semibold text-sm text-gray-700">Date</h3>
-              </div>
-              {(() => {
-                const dateInfo = formatDisplayDate(extractedData.date || extractedData.dates?.[0]);
-                return (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{dateInfo.formatted}</p>
-                    <div className="flex items-center gap-2">
-                      {dateInfo.isToday ? (
-                        <>
-                          <Clock size={12} className="text-green-600" />
-                          <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                            {dateInfo.note}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Calendar size={12} className="text-blue-600" />
-                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                            {dateInfo.note}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">Raw: {dateInfo.raw}</p>
-                  </div>
-                );
-              })()}
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle size={16} />
+              <span className="font-semibold">Receipt processed</span>
             </div>
           </div>
-          
-          {extractedData.items && extractedData.items.length > 0 && (
-            <div className="bg-gray-50 rounded p-3">
-              <h3 className="font-semibold text-sm text-gray-700 mb-2">Line Items</h3>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {extractedData.items.slice(0, 5).map((item, index) => (
-                  <p key={index} className="text-xs text-gray-600">{item}</p>
-                ))}
-                {extractedData.items.length > 5 && (
-                  <p className="text-xs text-gray-500">... and {extractedData.items.length - 5} more items</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          <button 
-            onClick={handleAddToExpenses}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <LabeledInput
+              label="Amount"
+              type="number"
+              value={editableData.amount}
+              onChange={(value) => setEditableData((current) => ({ ...current, amount: value }))}
+            />
+            <LabeledSelect
+              label="Category"
+              value={editableData.category}
+              onChange={(value) => setEditableData((current) => ({ ...current, category: value }))}
+              options={defaultCategories}
+            />
+            <LabeledInput
+              label="Date"
+              type="date"
+              value={editableData.date}
+              readOnly
+              disabled
+            />
+          </div>
+
+          <button
+            onClick={handleSaveExpense}
             disabled={loading || saved}
-            className={`w-full py-2 px-4 rounded transition ${
-              saved 
-                ? 'bg-green-600 text-white' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full rounded px-4 py-2 text-white transition ${
+              saved ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
+            } ${loading ? "cursor-not-allowed opacity-60" : ""}`}
           >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                Saving...
-              </div>
-            ) : saved ? (
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle size={16} />
-                Added Successfully!
-              </div>
-            ) : (
-              'Add to Expenses'
-            )}
+            {saved ? "Added Successfully" : loading ? "Saving..." : "Save Expense"}
           </button>
         </div>
-      )}
-      
-      {/* OCR Preview for debugging */}
-      {extractedData && !manualEntry && (
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
-            View Raw OCR Text
-          </summary>
-          <div className="bg-gray-50 rounded p-3 mt-2 text-xs text-gray-700 max-h-32 overflow-auto">
-            {extractedData.extracted_text || "No text extracted"}
-          </div>
-        </details>
       )}
     </Motion.div>
   );
 
-  return theme === "dark" ? (
-    <BorderGlow {...darkModeGlowProps}>
-      {cardContent}
-    </BorderGlow>
-  ) : (
-    cardContent
+  return theme === "dark" ? <BorderGlow {...darkModeGlowProps}>{cardContent}</BorderGlow> : cardContent;
+}
+
+function LabeledInput({ label, onChange, ...props }) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+      <input
+        {...props}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  );
+}
+
+function LabeledSelect({ label, value, onChange, options }) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">Select category</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

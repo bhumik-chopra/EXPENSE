@@ -5,6 +5,12 @@ import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
 
+const toInr = (expense) => {
+  const currency = String(expense?.currency || "INR").toUpperCase();
+  const amount = Number(expense?.amount || 0);
+  return currency === "USD" ? amount * 80 : amount;
+};
+
 export default function BudgetProgressCard() {
   const { theme } = useTheme();
   const parsedBudget =
@@ -28,7 +34,7 @@ export default function BudgetProgressCard() {
           expense.date.startsWith(currentMonth)
         );
 
-        const totalSpent = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalSpent = monthlyExpenses.reduce((sum, expense) => sum + toInr(expense), 0);
         setSpent(totalSpent);
         setExpenses(monthlyExpenses);
       }

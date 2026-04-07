@@ -8,8 +8,13 @@ export const getCurrentLocalDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const parseLocalDate = (dateString) => {
+  const [year, month, day] = String(dateString).split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 // Enhanced date formatting with timezone-aware current date detection
-export const formatDateInfo = (dateString) => {
+export const formatDateInfo = (dateString, currentDate = getCurrentLocalDate()) => {
   try {
     if (!dateString || dateString === 'Invalid Date' || dateString === '') {
       return { formatted: 'Invalid Date', isToday: false };
@@ -23,15 +28,14 @@ export const formatDateInfo = (dateString) => {
       return { formatted: 'Invalid Date', isToday: false };
     }
     
-    const date = new Date(cleanDateString);
+    const date = parseLocalDate(cleanDateString);
     
     // Check if the date is valid
     if (isNaN(date.getTime())) {
       return { formatted: 'Invalid Date', isToday: false };
     }
     
-    const today = getCurrentLocalDate();
-    const isToday = cleanDateString === today;
+    const isToday = cleanDateString === currentDate;
     
     const formatted = date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -55,7 +59,7 @@ export const formatDisplayDate = (dateString) => {
     if (!dateString || dateString === 'Invalid Date' || dateString === '') {
       const today = getCurrentLocalDate();
       return {
-        formatted: new Date(today).toLocaleDateString('en-US', {
+        formatted: parseLocalDate(today).toLocaleDateString('en-US', {
           weekday: 'short',
           year: 'numeric',
           month: 'short',
@@ -74,7 +78,7 @@ export const formatDisplayDate = (dateString) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
       const today = getCurrentLocalDate();
       return {
-        formatted: new Date(today).toLocaleDateString('en-US', {
+        formatted: parseLocalDate(today).toLocaleDateString('en-US', {
           weekday: 'short',
           year: 'numeric',
           month: 'short',
@@ -86,11 +90,11 @@ export const formatDisplayDate = (dateString) => {
       };
     }
     
-    const date = new Date(cleanDate);
+    const date = parseLocalDate(cleanDate);
     if (isNaN(date.getTime())) {
       const today = getCurrentLocalDate();
       return {
-        formatted: new Date(today).toLocaleDateString('en-US', {
+        formatted: parseLocalDate(today).toLocaleDateString('en-US', {
           weekday: 'short',
           year: 'numeric',
           month: 'short',
@@ -120,7 +124,7 @@ export const formatDisplayDate = (dateString) => {
     console.error('Date formatting error:', error);
     const today = getCurrentLocalDate();
     return {
-      formatted: new Date(today).toLocaleDateString('en-US', {
+      formatted: parseLocalDate(today).toLocaleDateString('en-US', {
         weekday: 'short',
         year: 'numeric',
         month: 'short',

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useSignIn, useSignUp } from "@clerk/clerk-react";
 import { motion as Motion } from "framer-motion";
-import { AlertCircle, Cake, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { AlertCircle, Cake, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import ThemeToggle from "./ThemeToggle";
@@ -25,6 +25,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
   const [pendingVerification, setPendingVerification] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const passwordChecks = {
     minLength: signUpPassword.length >= 8,
@@ -46,6 +47,35 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
     );
   };
 
+  const formatSignInStatus = (result) => {
+    const status = result?.status;
+    if (!status || status === "complete") {
+      return "";
+    }
+
+    if (status === "needs_second_factor") {
+      return "This account requires a second verification step before sign-in can finish.";
+    }
+
+    if (status === "needs_client_trust") {
+      return "Clerk marked this as a new device and requires an email or second-factor verification step.";
+    }
+
+    if (status === "needs_first_factor") {
+      return "This account needs a supported first-factor sign-in method. Check that password sign-in is enabled in Clerk.";
+    }
+
+    if (status === "needs_new_password") {
+      return "This account needs a new password before sign-in can continue.";
+    }
+
+    if (status === "needs_identifier") {
+      return "Enter your email address to continue.";
+    }
+
+    return `Additional sign-in steps are required. Clerk returned status: ${status}.`;
+  };
+
   const resetSignUpFlow = () => {
     setPendingVerification(false);
     setVerificationCode("");
@@ -62,13 +92,14 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
     setError("");
 
     try {
+      const normalizedIdentifier = username.trim().toLowerCase();
       const result = await signIn.create({
-        identifier: username,
+        identifier: normalizedIdentifier,
         password,
       });
 
       if (result.status !== "complete") {
-        throw new Error("Additional sign-in steps are required to continue.");
+        throw new Error(formatSignInStatus(result));
       }
 
       await setSignInActive({ session: result.createdSessionId });
@@ -99,7 +130,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
     try {
       const [firstName, ...remainingName] = signUpName.trim().split(/\s+/);
       await signUp.create({
-        emailAddress: signUpEmail,
+        emailAddress: signUpEmail.trim().toLowerCase(),
         password: signUpPassword,
         firstName: firstName || undefined,
         lastName: remainingName.join(" ") || undefined,
@@ -151,7 +182,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   const loginCard = (
     <Motion.div
-      className={`w-full max-w-2xl rounded-[1.35rem] p-5 shadow-xl backdrop-blur sm:p-6 ${
+      className={`w-full max-w-2xl rounded-[1.35rem] p-4 shadow-xl backdrop-blur sm:p-5 ${
         isDark
           ? "border border-fuchsia-400/20 bg-slate-950/82 text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
           : "border border-white/40 bg-white/95"
@@ -160,7 +191,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
       animate={{ opacity: 1, y: 0 }}
     >
         <div
-          className={`mb-5 rounded-[1rem] p-5 ${
+          className={`mb-4 rounded-[1rem] p-4 ${
             isDark
               ? "border border-fuchsia-400/15 bg-white/6"
               : "bg-blue-50"
@@ -184,8 +215,8 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                 transition={{ duration: 0.42, ease: "easeInOut" }}
               />
             </div>
-            <h1 className="mt-2 text-[1.85rem] font-bold leading-tight">Sign in</h1>
-            <p className={`mt-1.5 text-sm ${isDark ? "text-slate-300" : "text-gray-600"}`}>
+            <h1 className="mt-1.5 text-[1.65rem] font-bold leading-tight">Sign in</h1>
+            <p className={`mt-1 text-[13px] ${isDark ? "text-slate-300" : "text-gray-600"}`}>
               {mode === "signin"
                 ? "Sign in with your email and password."
                 : pendingVerification
@@ -202,7 +233,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
         </div>
 
         <div
-          className={`mb-4 grid grid-cols-2 rounded-xl p-1 ${
+          className={`mb-3 grid grid-cols-2 rounded-xl p-1 ${
             isDark ? "bg-white/8" : "bg-gray-100"
           }`}
         >
@@ -247,11 +278,11 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
         </div>
 
         {mode === "signin" ? (
-          <form className="space-y-3.5" onSubmit={handleSignIn}>
+            <form className="space-y-3" onSubmit={handleSignIn}>
             <label className="block">
               <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Email</span>
               <div
-                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                   isDark
                     ? "border border-white/12 bg-black/20"
                     : "border"
@@ -259,7 +290,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               >
                 <UserRound size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
                 <input
-                  type="text"
+                  type="email"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="Email"
@@ -268,7 +299,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                       ? "text-white caret-white placeholder:text-slate-500"
                       : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
                   }`}
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </label>
@@ -276,7 +307,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             <label className="block">
               <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Password</span>
               <div
-                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                   isDark
                     ? "border border-white/12 bg-black/20"
                     : "border"
@@ -284,7 +315,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               >
                 <LockKeyhole size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Password"
@@ -295,11 +326,20 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   }`}
                   autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className={`transition ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-700"}`}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </label>
 
             {error ? (
-              <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
+              <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-600">
                 <AlertCircle size={16} />
                 <span>{error}</span>
               </div>
@@ -308,16 +348,16 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.25 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Login"}
             </button>
           </form>
         ) : (
           pendingVerification ? (
-            <form className="space-y-3.5" onSubmit={handleVerifyEmail}>
+            <form className="space-y-3" onSubmit={handleVerifyEmail}>
               <div
-                className={`rounded-xl px-4 py-3 text-sm ${
+                className={`rounded-xl px-4 py-2.5 text-sm ${
                   isDark
                     ? "border border-white/10 bg-white/6 text-slate-200"
                     : "border border-slate-200 bg-slate-50 text-slate-700"
@@ -332,7 +372,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               <label className="block">
                 <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Verification code</span>
                 <div
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                     isDark
                       ? "border border-white/12 bg-black/20"
                       : "border"
@@ -355,7 +395,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               </label>
 
               {error ? (
-                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-600">
                   <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
@@ -365,13 +405,13 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl bg-blue-600 px-4 py-2.25 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Verifying..." : "Verify email"}
                 </button>
                 <button
                   type="button"
-                  className={`w-full rounded-xl px-4 py-2.5 font-semibold transition ${
+                  className={`w-full rounded-xl px-4 py-2.25 font-semibold transition ${
                     isDark
                       ? "border border-white/12 bg-white/6 text-slate-100 hover:bg-white/10"
                       : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -383,13 +423,13 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               </div>
             </form>
           ) : (
-            <form className="space-y-3.5" onSubmit={handleSignUp}>
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <form className="space-y-3" onSubmit={handleSignUp}>
+              <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Name</span>
                     <div
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                         isDark
                           ? "border border-white/12 bg-black/20"
                           : "border"
@@ -414,7 +454,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   <label className="block">
                     <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Email</span>
                     <div
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                         isDark
                           ? "border border-white/12 bg-black/20"
                           : "border"
@@ -439,7 +479,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   <label className="block">
                     <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Date of Birth</span>
                     <div
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                         isDark
                           ? "border border-white/12 bg-black/20"
                           : "border"
@@ -460,7 +500,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   <label className="block">
                     <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Password</span>
                     <div
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
                         isDark
                           ? "border border-white/12 bg-black/20"
                           : "border"
@@ -484,7 +524,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                 </div>
 
                 <div
-                  className={`rounded-xl px-3 py-3 text-sm lg:sticky lg:top-0 ${
+                  className={`rounded-xl px-3 py-2.5 text-sm lg:sticky lg:top-0 ${
                     isDark
                       ? "border border-white/10 bg-white/6 text-slate-200"
                       : "border border-slate-200 bg-slate-50 text-slate-700"
@@ -504,7 +544,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               </div>
 
               {error ? (
-                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm text-red-600">
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-600">
                   <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
@@ -513,7 +553,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl bg-blue-600 px-4 py-2.25 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Creating account..." : "Create account"}
               </button>

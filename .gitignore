@@ -32,9 +32,13 @@ __pycache__/
 .coverage.*
 htmlcov/
 .venv/
+backend/.venv311/
 venv/
 env/
 ENV/
+backend/backend-out.log
+backend/backend-err.log
+*.pyc
 
 # Node / frontend
 node_modules/
@@ -62,3 +66,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Local artifacts
+*.zip

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Tag, Building, Trash2, RefreshCw } from 'lucide-react';
-import { formatDateInfo } from '../utils/dateUtils';
+import { Calendar, DollarSign, Tag, Trash2, RefreshCw } from 'lucide-react';
+import { formatDateInfo, getCurrentLocalDate } from '../utils/dateUtils';
 
 export default function ExpensesList() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentDate, setCurrentDate] = useState(getCurrentLocalDate());
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -29,6 +30,22 @@ export default function ExpensesList() {
 
   useEffect(() => {
     fetchExpenses();
+  }, []);
+
+  useEffect(() => {
+    const syncCurrentDate = () => {
+      setCurrentDate((previousDate) => {
+        const nextDate = getCurrentLocalDate();
+        return previousDate === nextDate ? previousDate : nextDate;
+      });
+    };
+
+    syncCurrentDate();
+    const intervalId = window.setInterval(syncCurrentDate, 60000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   const deleteExpense = async (id) => {
@@ -126,16 +143,11 @@ export default function ExpensesList() {
         </div>
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-3">
         {expenses.map((expense) => (
           <div key={expense.id} className="border rounded-lg p-4 hover:bg-gray-50 transition">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building size={16} className="text-gray-500" />
-                  <span className="font-semibold text-gray-800">{expense.vendor}</span>
-                </div>
-                
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div className="flex items-center gap-1">
                     <DollarSign size={14} className="text-green-600" />
@@ -152,7 +164,7 @@ export default function ExpensesList() {
                   <div className="flex items-center gap-1">
                     <Calendar size={14} className="text-gray-500" />
                     {(() => {
-                      const dateInfo = formatDateInfo(expense.date);
+                      const dateInfo = formatDateInfo(expense.date, currentDate);
                       return (
                         <span className={dateInfo.isToday ? 'text-green-600 font-medium' : 'text-gray-600'}>
                           {dateInfo.formatted}

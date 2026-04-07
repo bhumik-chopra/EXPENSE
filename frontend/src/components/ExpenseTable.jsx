@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion as Motion } from "framer-motion";
-import { Search, Filter, RefreshCw } from "lucide-react";
+import { Filter, RefreshCw } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
-import { formatDateInfo } from '../utils/dateUtils';
+import { formatDateInfo, getCurrentLocalDate } from '../utils/dateUtils';
 
 export default function ExpenseTable() {
   const { theme } = useTheme();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
   const [date, setDate] = useState("");
+  const [currentDate, setCurrentDate] = useState(getCurrentLocalDate());
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -56,9 +56,23 @@ export default function ExpenseTable() {
     };
   }, [fetchExpenses]);
 
-  // Filter expenses based on search and filters
+  useEffect(() => {
+    const syncCurrentDate = () => {
+      setCurrentDate((previousDate) => {
+        const nextDate = getCurrentLocalDate();
+        return previousDate === nextDate ? previousDate : nextDate;
+      });
+    };
+
+    syncCurrentDate();
+    const intervalId = window.setInterval(syncCurrentDate, 60000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   const filtered = expenses.filter(e =>
-    (!search || e.vendor?.toLowerCase().includes(search.toLowerCase())) &&
     (!category || category === 'All Categories' || e.category === category) &&
     (!date || e.date === date)
   );
@@ -91,15 +105,6 @@ export default function ExpenseTable() {
       </div>
       
       <div className="mb-4 flex flex-col gap-2 xl:flex-row">
-        <div className="relative min-w-0 flex-1">
-          <input 
-            className="w-full rounded-lg border px-3 py-2 pl-9 text-sm" 
-            placeholder="Search vendor..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-          />
-          <Search className="absolute left-2 top-2 text-gray-400" size={18} />
-        </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex xl:w-auto">
           <select 
             className="rounded-lg border px-3 py-2 text-sm xl:min-w-[180px]" 
@@ -129,7 +134,6 @@ export default function ExpenseTable() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-gray-500 border-b">
-              <th className="py-2 text-left">Vendor</th>
               <th className="py-2 text-left">Amount</th>
               <th className="py-2 text-left">Category</th>
               <th className="py-2 text-left">Date</th>
@@ -138,7 +142,7 @@ export default function ExpenseTable() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center">
+                <td colSpan={3} className="py-8 text-center">
                   <div className="flex items-center justify-center">
                     <RefreshCw className="animate-spin mr-2" size={16} />
                     Loading expenses...
@@ -147,7 +151,7 @@ export default function ExpenseTable() {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-red-500">
+                <td colSpan={3} className="py-8 text-center text-red-500">
                   <div>
                     <p>{error}</p>
                     <button 
@@ -161,14 +165,13 @@ export default function ExpenseTable() {
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-400">
+                <td colSpan={3} className="py-8 text-center text-gray-400">
                   {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
                 </td>
               </tr>
             ) : (
               filtered.map((expense) => (
                 <tr key={expense.id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 font-medium">{expense.vendor}</td>
                   <td className="py-3 text-green-600 font-semibold">
                     {formatCurrency(expense.amount, expense.currency)}
                   </td>
@@ -179,7 +182,7 @@ export default function ExpenseTable() {
                   </td>
                   <td className="py-3 text-gray-600">
                     {(() => {
-                      const dateInfo = formatDateInfo(expense.date);
+                      const dateInfo = formatDateInfo(expense.date, currentDate);
                       return (
                         <span className={dateInfo.isToday ? 'text-green-600 font-medium' : ''}>
                           {dateInfo.formatted}

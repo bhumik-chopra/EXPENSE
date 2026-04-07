@@ -53,13 +53,12 @@ export default function Reports() {
       return;
     }
 
-    const headers = ["Date", "Vendor", "Category", "Amount", "Currency"];
+    const headers = ["Date", "Category", "Amount", "Currency"];
     const csvContent = [
       headers.join(","),
       ...filteredExpenses.map((expense) =>
         [
           expense.date,
-          `"${expense.vendor || "Unknown"}"`,
           expense.category,
           expense.amount,
           expense.currency || "INR",
@@ -105,7 +104,6 @@ export default function Reports() {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Vendor</th>
                 <th>Category</th>
                 <th>Amount</th>
                 <th>Currency</th>
@@ -117,7 +115,6 @@ export default function Reports() {
                   (expense) => `
                 <tr>
                   <td>${expense.date}</td>
-                  <td>${expense.vendor || "Unknown"}</td>
                   <td>${expense.category}</td>
                   <td>${expense.amount.toFixed(2)}</td>
                   <td>${expense.currency || "INR"}</td>
@@ -189,15 +186,12 @@ export default function Reports() {
           <p className="mt-2 text-gray-600">Loading expenses...</p>
         </div>
       ) : filteredExpenses.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vendor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
@@ -212,9 +206,6 @@ export default function Reports() {
                 <tr key={expense.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(expense.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {expense.vendor || "Unknown"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">

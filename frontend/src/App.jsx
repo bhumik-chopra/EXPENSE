@@ -24,11 +24,15 @@ export default function App() {
   });
 
   useEffect(() => {
+    document.documentElement.classList.toggle("theme-light-body", theme === "light");
+    document.documentElement.classList.toggle("theme-dark-body", theme === "dark");
     document.body.classList.toggle("theme-light-body", theme === "light");
     document.body.classList.toggle("theme-dark-body", theme === "dark");
     window.localStorage.setItem("expense-tracker-theme", theme);
 
     return () => {
+      document.documentElement.classList.remove("theme-light-body");
+      document.documentElement.classList.remove("theme-dark-body");
       document.body.classList.remove("theme-light-body");
       document.body.classList.remove("theme-dark-body");
     };
@@ -101,7 +105,7 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ theme }}>
       <div
-        className={`app-shell flex min-h-screen bg-gray-50 ${
+        className={`app-shell flex min-h-screen min-h-dvh bg-gray-50 ${
           theme === "dark" ? "theme-dark" : "theme-light"
         }`}
       >
@@ -121,7 +125,7 @@ export default function App() {
             onOpenSettings={() => handlePageChange("Settings")}
             onLogout={handleLogout}
           />
-          <main className={`flex-1 p-4 md:p-6 ${page === "Settings" ? "overflow-hidden" : "overflow-auto"}`}>
+          <main className="flex-1 overflow-visible p-4 md:p-6">
             {content}
           </main>
         </div>

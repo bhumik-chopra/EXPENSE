@@ -68,6 +68,9 @@ export default function PieChartCard() {
 
   const total = segments.reduce((sum, segment) => sum + segment.amount, 0);
   let cumulative = 0;
+  const centerFill = theme === "dark" ? "#14121c" : "#ffffff";
+  const centerLabelColor = theme === "dark" ? "#c4b5fd" : "#6b7280";
+  const centerValueColor = theme === "dark" ? "#f5e8ff" : "#111827";
 
   const cardContent = (
     <Motion.div
@@ -116,11 +119,23 @@ export default function PieChartCard() {
                 />
               );
             })}
-            <circle cx="60" cy="60" r="24" fill="white" />
-            <text x="60" y="56" textAnchor="middle" className="fill-gray-500 text-[7px] rotate-90 origin-center">
+            <circle cx="60" cy="60" r="24" fill={centerFill} />
+            <text
+              x="60"
+              y="56"
+              textAnchor="middle"
+              fill={centerLabelColor}
+              className="text-[7px] rotate-90 origin-center"
+            >
               Total
             </text>
-            <text x="60" y="66" textAnchor="middle" className="fill-gray-900 text-[8px] font-semibold rotate-90 origin-center">
+            <text
+              x="60"
+              y="66"
+              textAnchor="middle"
+              fill={centerValueColor}
+              className="text-[8px] font-semibold rotate-90 origin-center"
+            >
               Rs.{total.toFixed(0)}
             </text>
           </Motion.svg>
