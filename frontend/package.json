@@ -12,6 +12,7 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.61.4",
     "framer-motion": "^12.9.5",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.542.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

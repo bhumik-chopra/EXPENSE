@@ -1,6 +1,6 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
-import { Home, Upload, BarChart2, Settings } from "lucide-react";
+import { Home, Upload, BarChart2, ChartColumnBig, Settings } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import sidebarBadge from "../assets/expense-tracker-sidebar-badge.svg";
 import sidebarBadgeDark from "../assets/expense-tracker-sidebar-badge-dark.svg";
@@ -9,6 +9,7 @@ import sidebarBadgeDark from "../assets/expense-tracker-sidebar-badge-dark.svg";
 const menu = [
   { name: "Dashboard", icon: <Home size={20} /> },
   { name: "Upload Receipt", icon: <Upload size={20} /> },
+  { name: "Charts", icon: <ChartColumnBig size={20} /> },
   { name: "Reports", icon: <BarChart2 size={20} /> },
   { name: "Settings", icon: <Settings size={20} /> },
 ];

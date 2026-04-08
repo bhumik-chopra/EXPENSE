@@ -4,6 +4,7 @@ import { Settings, Target, TrendingUp, AlertTriangle } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
+import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 
 const toInr = (expense) => {
   const currency = String(expense?.currency || "INR").toUpperCase();
@@ -25,19 +26,16 @@ export default function BudgetProgressCard() {
 
   async function fetchExpenses() {
     try {
-      const response = await fetch("http://localhost:5000/api/expenses");
-      if (response.ok) {
-        const data = await response.json();
-        const currentMonth = new Date().toISOString().slice(0, 7);
+      const data = await fetchExpensesRequest();
+      const currentMonth = new Date().toISOString().slice(0, 7);
 
-        const monthlyExpenses = (data.expenses || []).filter((expense) =>
-          expense.date.startsWith(currentMonth)
-        );
+      const monthlyExpenses = (data.expenses || []).filter((expense) =>
+        expense.date.startsWith(currentMonth)
+      );
 
-        const totalSpent = monthlyExpenses.reduce((sum, expense) => sum + toInr(expense), 0);
-        setSpent(totalSpent);
-        setExpenses(monthlyExpenses);
-      }
+      const totalSpent = monthlyExpenses.reduce((sum, expense) => sum + toInr(expense), 0);
+      setSpent(totalSpent);
+      setExpenses(monthlyExpenses);
     } catch (error) {
       console.error("Error fetching expenses:", error);
     }

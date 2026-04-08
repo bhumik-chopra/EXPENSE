@@ -38,6 +38,9 @@ env/
 ENV/
 backend/backend-out.log
 backend/backend-err.log
+backend/backend-run.log
+backend/backend-run.err.log
+backend/backend-session.log
 *.pyc
 
 # Node / frontend
@@ -50,6 +53,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+frontend/frontend-out.log
+frontend/frontend-err.log
 
 # Local databases and dumps
 *.db

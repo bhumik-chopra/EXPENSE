@@ -3,6 +3,7 @@ import { motion as Motion } from "framer-motion";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
+import { fetchAnalytics as fetchAnalyticsRequest } from "../utils/api";
 
 export default function LineChartCard() {
   const { theme } = useTheme();
@@ -14,17 +15,11 @@ export default function LineChartCard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:5000/api/analytics");
-      const result = await response.json();
-
-      if (result.success) {
-        setData(result.monthlyData || []);
-      } else {
-        setError("Failed to fetch analytics data");
-      }
+      const result = await fetchAnalyticsRequest();
+      setData(result.monthlyData || []);
     } catch (err) {
       console.error("Error fetching analytics:", err);
-      setError("Failed to connect to server");
+      setError(err.message || "Failed to connect to server");
     } finally {
       setLoading(false);
     }

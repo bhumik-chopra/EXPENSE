@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { jsPDF } from "jspdf";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
+import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 
 export default function Reports() {
   const { theme } = useTheme();
@@ -34,12 +36,9 @@ export default function Reports() {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/expenses");
-      if (response.ok) {
-        const data = await response.json();
-        setExpenses(data.expenses || []);
-        setFilteredExpenses(data.expenses || []);
-      }
+      const data = await fetchExpensesRequest();
+      setExpenses(data.expenses || []);
+      setFilteredExpenses(data.expenses || []);
     } catch (error) {
       console.error("Error fetching expenses:", error);
     } finally {
@@ -79,60 +78,96 @@ export default function Reports() {
       return;
     }
 
-    const printWindow = window.open("", "_blank");
     const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const reportLabel = month || "All Time";
+    const fileName = `expenses_${month || "all"}.pdf`;
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Expense Report - ${month || "All Time"}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .total { font-weight: bold; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Expense Tracker Report</h1>
-            <h2>${month || "All Time"}</h2>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Currency</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredExpenses
-                .map(
-                  (expense) => `
-                <tr>
-                  <td>${expense.date}</td>
-                  <td>${expense.category}</td>
-                  <td>${expense.amount.toFixed(2)}</td>
-                  <td>${expense.currency || "INR"}</td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-          <div class="total">
-            Total: ${totalAmount.toFixed(2)} ${filteredExpenses[0]?.currency || "INR"}
-          </div>
-        </body>
-      </html>
-    `);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 40;
+    const headerY = 48;
+    const rowHeight = 24;
+    const colX = {
+      date: marginX,
+      category: 180,
+      amount: 340,
+      currency: 450,
+    };
+    let y = 110;
 
-    printWindow.document.close();
-    printWindow.print();
+    const drawHeader = () => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("Expense Tracker Report", marginX, headerY);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Period: ${reportLabel}`, marginX, headerY + 22);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, marginX, headerY + 40);
+
+      doc.setDrawColor(220, 220, 220);
+      doc.line(marginX, 92, pageWidth - marginX, 92);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Date", colX.date, y);
+      doc.text("Category", colX.category, y);
+      doc.text("Amount", colX.amount, y);
+      doc.text("Currency", colX.currency, y);
+
+      y += 14;
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 18;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+    };
+
+    drawHeader();
+
+    filteredExpenses.forEach((expense) => {
+      if (y > pageHeight - 70) {
+        doc.addPage();
+        y = 110;
+        drawHeader();
+      }
+
+      doc.text(String(new Date(expense.date).toLocaleDateString()), colX.date, y);
+      doc.text(String(expense.category || "-"), colX.category, y, { maxWidth: 140 });
+      doc.text(`Rs.${Number(expense.amount || 0).toFixed(2)}`, colX.amount, y);
+      doc.text(String(expense.currency || "INR"), colX.currency, y);
+      y += rowHeight;
+    });
+
+    if (y > pageHeight - 70) {
+      doc.addPage();
+      y = 110;
+    }
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 24;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(
+      `Total: Rs.${totalAmount.toFixed(2)} ${filteredExpenses[0]?.currency || "INR"}`,
+      marginX,
+      y
+    );
+
+    const pdfBlob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, "_blank", "noopener,noreferrer");
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = pdfUrl;
+    downloadLink.download = fileName;
+    downloadLink.click();
+
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000);
   };
 
   const cardContent = (

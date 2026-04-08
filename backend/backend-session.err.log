@@ -1,0 +1,61 @@
+C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\sklearn\base.py:463: InconsistentVersionWarning: Trying to unpickle estimator LogisticRegression from version 1.5.2 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\sklearn\base.py:463: InconsistentVersionWarning: Trying to unpickle estimator TfidfTransformer from version 1.3.2 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\sklearn\base.py:463: InconsistentVersionWarning: Trying to unpickle estimator TfidfVectorizer from version 1.3.2 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\sklearn\base.py:463: InconsistentVersionWarning: Trying to unpickle estimator LabelEncoder from version 1.3.2 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+[33mChecking connectivity to the model hosters, this may take a while. To bypass this check, set `DISABLE_MODEL_SOURCE_CHECK` to `True`.[0m
+INFO: Could not find files for the given pattern(s).
+C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\paddle\utils\cpp_extension\extension_utils.py:718: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md
+  warnings.warn(warning_message)
+[32mCreating model: ('PP-OCRv4_mobile_det', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\BHUMIK\.paddlex\official_models\PP-OCRv4_mobile_det`.[0m
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0408 10:50:52.154577 20360 onednn_context.cc:81] oneDNN v3.6.2
+[32mCreating model: ('en_PP-OCRv4_mobile_rec', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\BHUMIK\.paddlex\official_models\en_PP-OCRv4_mobile_rec`.[0m
+[2026-04-08 10:50:52,986] [ WARNING] easyocr.py:71 - Using CPU. Note: This module is much faster with a GPU.
+[2026-04-08 10:50:58,863] [    INFO] _internal.py:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.248.31.61:5000
+[2026-04-08 10:50:58,864] [    INFO] _internal.py:97 - [33mPress CTRL+C to quit[0m
+[2026-04-08 10:51:04,322] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:04,326] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/analytics HTTP/1.1" 200 -
+[2026-04-08 10:51:04,332] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:04,341] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/analytics HTTP/1.1" 200 -
+[2026-04-08 10:51:04,354] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:04,360] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:04,647] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:04,768] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:05,010] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:05,207] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:05,376] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-08 10:51:05,423] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:05,624] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-08 10:51:05,812] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:08,811] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:08] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:09,253] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:09] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:09,682] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:09] "GET /api/health HTTP/1.1" 200 -
+[2026-04-08 10:51:34,324] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:34] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:51:34,775] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:34] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:52:04,020] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:52:04,134] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:04] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:52:35,226] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:35] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:52:35,669] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:35] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:53:04,913] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:53:05,025] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:53:35,224] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:35] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:53:35,676] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:35] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:54:04,929] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:54:05,051] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:05] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:54:45,232] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:45] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:54:45,688] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:45] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:55:44,917] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:55:44] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-08 10:55:45,103] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:55:45] "GET /api/expenses HTTP/1.1" 200 -

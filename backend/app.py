@@ -15,6 +15,9 @@ from dateutil import parser as date_parser
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from pymongo import MongoClient
+from pymongo.errors import PyMongoError
+from bson import ObjectId
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -108,9 +111,9 @@ CORS(
     ],
 )
 
-expenses_db = []
-expense_id_counter = 1
 USD_TO_INR_RATE = 80.0
+MONGODB_URI = os.environ.get("MONGODB_URI", "").strip()
+MONGODB_DB_NAME = os.environ.get("MONGODB_DB_NAME", "EXPENSE").strip() or "EXPENSE"
 
 
 def normalize_currency(value) -> str:
@@ -121,6 +124,153 @@ def normalize_currency(value) -> str:
 def amount_to_inr(amount, currency) -> float:
     normalized_currency = normalize_currency(currency)
     return float(amount) * (USD_TO_INR_RATE if normalized_currency == "USD" else 1.0)
+
+
+class MongoExpenseStore:
+    def __init__(self, uri: str, db_name: str) -> None:
+        self.uri = uri
+        self.db_name = db_name
+        self.client = None
+        self.db = None
+        self.expenses = None
+        self.users = None
+        self.error = None
+
+        if not self.uri:
+            self.error = "MongoDB connection string is not configured."
+            return
+
+        try:
+            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
+            self.client.admin.command("ping")
+            self.db = self.client[self.db_name]
+            self.expenses = self.db["expenses"]
+            self.users = self.db["users"]
+            self.expenses.create_index([("user_id", 1), ("date", -1), ("createdAt", -1)])
+            self.users.create_index(
+                "user_id",
+                unique=True,
+                partialFilterExpression={"user_id": {"$type": "string"}},
+            )
+        except Exception as exc:
+            self.error = str(exc)
+
+    @property
+    def is_ready(self) -> bool:
+        return self.client is not None and self.db is not None and self.error is None
+
+    def ensure_user(self, user: dict) -> None:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        now = datetime.utcnow().isoformat()
+        username = user.get("email", "").split("@")[0].strip() or user["id"]
+        self.users.update_one(
+            {"user_id": user["id"]},
+            {
+                "$set": {
+                    "email": user.get("email", ""),
+                    "name": user.get("name", ""),
+                    "username": username,
+                    "updatedAt": now,
+                },
+                "$setOnInsert": {
+                    "user_id": user["id"],
+                    "createdAt": now,
+                },
+            },
+            upsert=True,
+        )
+
+    def create_expense(self, user: dict, expense: dict) -> dict:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        self.ensure_user(user)
+        payload = {
+            **expense,
+            "user_id": user["id"],
+            "user_email": user.get("email", ""),
+            "user_name": user.get("name", ""),
+        }
+        result = self.expenses.insert_one(payload)
+        payload["id"] = str(result.inserted_id)
+        payload.pop("_id", None)
+        return payload
+
+    def list_expenses(
+        self,
+        user_id: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        category: str | None = None,
+    ) -> list[dict]:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        query: dict = {"user_id": user_id}
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        if date_filter:
+            query["date"] = date_filter
+        if category and category != "All Categories":
+            query["category"] = category
+
+        docs = list(self.expenses.find(query).sort([("date", -1), ("createdAt", -1)]))
+        expenses = []
+        for doc in docs:
+            doc["id"] = str(doc.pop("_id"))
+            expenses.append(doc)
+        return expenses
+
+    def delete_expense(self, user_id: str, expense_id: str) -> bool:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        if not ObjectId.is_valid(expense_id):
+            return False
+
+        result = self.expenses.delete_one({"_id": ObjectId(expense_id), "user_id": user_id})
+        return result.deleted_count > 0
+
+    def clear_expenses(self, user_id: str) -> int:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        result = self.expenses.delete_many({"user_id": user_id})
+        return result.deleted_count
+
+    def count_expenses(self) -> int:
+        if not self.is_ready:
+            return 0
+        return self.expenses.count_documents({})
+
+
+expense_store = MongoExpenseStore(MONGODB_URI, MONGODB_DB_NAME)
+
+
+def get_request_user():
+    user_id = str(request.headers.get("X-User-Id", "")).strip()
+    user_email = str(request.headers.get("X-User-Email", "")).strip().lower()
+    user_name = str(request.headers.get("X-User-Name", "")).strip()
+
+    if not user_id:
+        return None, jsonify({"error": "User context is required for this request."}), 401
+
+    return {
+        "id": user_id,
+        "email": user_email,
+        "name": user_name,
+    }, None, None
+
+
+def require_expense_store():
+    if expense_store.is_ready:
+        return None
+    return jsonify({"error": expense_store.error or "MongoDB is unavailable."}), 503
 
 
 class ReceiptProcessor:
@@ -218,6 +368,18 @@ class ReceiptProcessor:
         if inferred_amount > 0:
             amounts = sorted(set([*amounts, inferred_amount]), reverse=True)
 
+        def is_implausible_ocr_merge(value: float) -> bool:
+            if value < 10000:
+                return False
+
+            compact = str(int(round(value)))
+            if len(compact) < 5:
+                return False
+
+            has_repeated_halves = len(compact) % 2 == 0 and compact[: len(compact) // 2] == compact[len(compact) // 2 :]
+            has_misaligned_qty_price_pattern = bool(re.search(r"(?:\d{2,3})0$", compact) or re.search(r"(?:\d{3}){2,}", compact))
+            return has_repeated_halves or has_misaligned_qty_price_pattern
+
         def score_amount_candidate(value: float) -> int:
             if not value or value <= 0:
                 return -999
@@ -252,10 +414,12 @@ class ReceiptProcessor:
             detected_score = score_amount_candidate(detected_amount)
             current_score = score_amount_candidate(current_amount) if current_amount > 0 else -999
             is_suspicious_downgrade = current_amount > 0 and detected_amount < current_amount * 0.5
+            is_implausible_upgrade = current_amount > 0 and detected_amount > current_amount * 5 and is_implausible_ocr_merge(detected_amount)
 
             if (
                 not current_amount
                 or not is_suspicious_downgrade
+                and not is_implausible_upgrade
                 and (
                     detected_score > current_score
                     or (detected_score == current_score and detected_amount > current_amount)
@@ -274,7 +438,10 @@ class ReceiptProcessor:
         if inferred_amount > 0 and (
             not default_amount
             or default_amount <= 0
-            or inferred_amount > float(default_amount) * 2
+            or (
+                inferred_amount > float(default_amount) * 2
+                and not is_implausible_ocr_merge(inferred_amount)
+            )
             or score_amount_candidate(inferred_amount) > score_amount_candidate(float(default_amount))
         ):
             default_amount = inferred_amount
@@ -541,19 +708,85 @@ class ReceiptProcessor:
         return "Unknown Vendor"
 
     def _extract_date(self, text: str) -> str:
-        date_patterns = [
-            r"\b\d{4}-\d{2}-\d{2}\b",
-            r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",
+        current_year = datetime.now().year
+
+        def normalize_year(raw_year: str) -> int | None:
+            try:
+                year = int(raw_year)
+            except ValueError:
+                return None
+
+            if len(raw_year) == 2:
+                candidate = 2000 + year
+                return candidate if candidate <= current_year + 1 else 1900 + year
+
+            return year
+
+        def build_date(day: str, month: str, year: str) -> str | None:
+            normalized_year = normalize_year(year)
+            if normalized_year is None:
+                return None
+
+            try:
+                parsed = datetime.strptime(
+                    f"{int(day):02d} {month} {normalized_year}",
+                    "%d %m %Y",
+                )
+            except ValueError:
+                try:
+                    parsed = datetime.strptime(
+                        f"{int(day):02d} {month} {normalized_year}",
+                        "%d %b %Y",
+                    )
+                except ValueError:
+                    try:
+                        parsed = datetime.strptime(
+                            f"{int(day):02d} {month} {normalized_year}",
+                            "%d %B %Y",
+                        )
+                    except ValueError:
+                        return None
+
+            if 2000 <= parsed.year <= current_year + 1:
+                return parsed.strftime("%Y-%m-%d")
+            return None
+
+        direct_patterns = [
+            (r"\b(\d{4})-(\d{2})-(\d{2})\b", lambda m: f"{m.group(1)}-{m.group(2)}-{m.group(3)}"),
+            (
+                r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})(?=\d{1,2}:\d{2}(?:\s*[APMapm]{2})?)",
+                lambda m: build_date(m.group(1), m.group(2), m.group(3)),
+            ),
+            (
+                r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})(?=\d{1,2}:\d{2}(?:\s*[APMapm]{2})?)",
+                lambda m: (
+                    lambda parts: build_date(parts[0], parts[1], parts[2])
+                )(re.split(r"[/-]", m.group(1))),
+            ),
+            (r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
+            (r"\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
+            (r"\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{2,4})\b", lambda m: build_date(m.group(2), m.group(1), m.group(3))),
+            (r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
+        ]
+
+        for pattern, parser in direct_patterns:
+            for match in re.finditer(pattern, text):
+                try:
+                    parsed_value = parser(match)
+                    if parsed_value:
+                        return parsed_value
+                except (ValueError, OverflowError):
+                    continue
+
+        fallback_patterns = [
             r"\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}\b",
             r"\b[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4}\b",
         ]
 
-        for pattern in date_patterns:
-            matches = re.findall(pattern, text)
-            for match in matches:
+        for pattern in fallback_patterns:
+            for match in re.findall(pattern, text):
                 try:
-                    parsed = date_parser.parse(match, fuzzy=True, dayfirst=True)
-                    current_year = datetime.now().year
+                    parsed = date_parser.parse(match, fuzzy=False, dayfirst=True)
                     if 2000 <= parsed.year <= current_year + 1:
                         return parsed.strftime("%Y-%m-%d")
                 except (ValueError, OverflowError):
@@ -898,9 +1131,15 @@ def categorize_expense():
 
 @app.route("/api/expenses", methods=["GET", "POST"])
 def expenses():
-    global expense_id_counter, expenses_db
-
     try:
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
         if request.method == "POST":
             data = request.get_json(silent=True) or {}
 
@@ -927,53 +1166,49 @@ def expenses():
 
             current_timestamp = datetime.now()
             expense = {
-                "id": expense_id_counter,
                 "vendor": vendor,
                 "amount": amount,
                 "currency": normalize_currency(data.get("currency", "INR")),
                 "category": category,
-                "date": current_timestamp.strftime("%Y-%m-%d"),
+                "date": str(data.get("date") or current_timestamp.strftime("%Y-%m-%d")),
                 "time": current_timestamp.strftime("%H:%M:%S"),
                 "items": data.get("items", []),
                 "createdAt": current_timestamp.isoformat(),
             }
 
-            expenses_db.append(expense)
-            expense_id_counter += 1
+            stored_expense = expense_store.create_expense(user, expense)
 
             return jsonify(
                 {
                     "success": True,
                     "message": "Expense added successfully",
-                    "expense": expense,
+                    "expense": stored_expense,
                 }
             )
 
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
         category = request.args.get("category")
-
-        filtered_expenses = expenses_db.copy()
-
-        if start_date:
-            filtered_expenses = [expense for expense in filtered_expenses if str(expense.get("date", "")) >= start_date]
-        if end_date:
-            filtered_expenses = [expense for expense in filtered_expenses if str(expense.get("date", "")) <= end_date]
-        if category and category != "All Categories":
-            filtered_expenses = [expense for expense in filtered_expenses if expense["category"] == category]
-
-        filtered_expenses.sort(key=lambda expense: str(expense.get("date", "")), reverse=True)
+        filtered_expenses = expense_store.list_expenses(user["id"], start_date=start_date, end_date=end_date, category=category)
         return jsonify({"success": True, "expenses": filtered_expenses, "total": len(filtered_expenses)})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
 
-@app.route("/api/expenses/<int:expense_id>", methods=["DELETE"])
+@app.route("/api/expenses/<expense_id>", methods=["DELETE"])
 def delete_expense(expense_id):
-    global expenses_db
-
     try:
-        expenses_db = [expense for expense in expenses_db if expense["id"] != expense_id]
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
+        deleted = expense_store.delete_expense(user["id"], expense_id)
+        if not deleted:
+            return jsonify({"error": "Expense not found"}), 404
         return jsonify({"success": True, "message": "Expense deleted successfully"})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -982,7 +1217,16 @@ def delete_expense(expense_id):
 @app.route("/api/analytics", methods=["GET"])
 def analytics():
     try:
-        if not expenses_db:
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
+        expenses = expense_store.list_expenses(user["id"])
+        if not expenses:
             return jsonify(
                 {
                     "success": True,
@@ -997,7 +1241,7 @@ def analytics():
         category_totals = defaultdict(float)
         monthly_totals = defaultdict(float)
 
-        for expense in expenses_db:
+        for expense in expenses:
             amount_inr = amount_to_inr(expense["amount"], expense.get("currency"))
             category_totals[expense["category"]] += amount_inr
 
@@ -1012,7 +1256,7 @@ def analytics():
         category_data = [{"name": category, "value": round(amount, 2)} for category, amount in category_totals.items()]
         monthly_data = [{"month": month, "amount": round(amount, 2)} for month, amount in sorted(monthly_totals.items())]
         total_expenses = sum(category_totals.values())
-        average_expense = total_expenses / len(expenses_db)
+        average_expense = total_expenses / len(expenses)
 
         return jsonify(
             {
@@ -1021,7 +1265,7 @@ def analytics():
                 "monthlyData": monthly_data,
                 "totalExpenses": round(total_expenses, 2),
                 "averageExpense": round(average_expense, 2),
-                "expenseCount": len(expenses_db),
+                "expenseCount": len(expenses),
             }
         )
     except Exception as exc:
@@ -1030,11 +1274,17 @@ def analytics():
 
 @app.route("/api/expenses/clear", methods=["DELETE"])
 def clear_expenses():
-    global expenses_db
-
     try:
-        expenses_db = []
-        return jsonify({"success": True, "message": "All expenses cleared"})
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
+        deleted_count = expense_store.clear_expenses(user["id"])
+        return jsonify({"success": True, "message": "All expenses cleared", "deleted_count": deleted_count})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -1047,7 +1297,9 @@ def health_check():
             "ocr_ready": receipt_processor.is_ready,
             "ocr_error": receipt_processor.service_error,
             "ocr_backend": getattr(receipt_processor.ocr_service, "ocr_backend", None),
-            "expenses_count": len(expenses_db),
+            "mongo_ready": expense_store.is_ready,
+            "mongo_error": expense_store.error,
+            "expenses_count": expense_store.count_expenses(),
         }
     )
 

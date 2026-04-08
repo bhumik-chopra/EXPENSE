@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, DollarSign, Tag, Trash2, RefreshCw } from 'lucide-react';
 import { formatDateInfo, getCurrentLocalDate } from '../utils/dateUtils';
+import { deleteExpense as deleteExpenseRequest, fetchExpenses as fetchExpensesRequest } from '../utils/api';
 
 export default function ExpensesList() {
   const [expenses, setExpenses] = useState([]);
@@ -12,17 +13,11 @@ export default function ExpensesList() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5000/api/expenses');
-      const data = await response.json();
-      
-      if (data.success) {
-        setExpenses(data.expenses);
-      } else {
-        setError('Failed to fetch expenses');
-      }
+      const data = await fetchExpensesRequest();
+      setExpenses(data.expenses || []);
     } catch (err) {
       console.error('Error fetching expenses:', err);
-      setError('Failed to connect to server');
+      setError(err.message || 'Failed to connect to server');
     } finally {
       setLoading(false);
     }
@@ -50,22 +45,12 @@ export default function ExpensesList() {
 
   const deleteExpense = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/expenses/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        // Remove from local state
-        setExpenses(expenses.filter(expense => expense.id !== id));
-        
-        // Trigger refresh of parent components
-        window.dispatchEvent(new CustomEvent('expenseDeleted'));
-      } else {
-        setError('Failed to delete expense');
-      }
+      await deleteExpenseRequest(id);
+      setExpenses(expenses.filter(expense => expense.id !== id));
+      window.dispatchEvent(new CustomEvent('expenseDeleted'));
     } catch (err) {
       console.error('Error deleting expense:', err);
-      setError('Failed to delete expense');
+      setError(err.message || 'Failed to delete expense');
     }
   };
 

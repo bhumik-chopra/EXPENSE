@@ -5,6 +5,7 @@ import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
 import { formatDateInfo, getCurrentLocalDate } from '../utils/dateUtils';
+import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 
 export default function ExpenseTable() {
   const { theme } = useTheme();
@@ -19,21 +20,14 @@ export default function ExpenseTable() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (category && category !== 'All Categories') params.append('category', category);
-      if (date) params.append('start_date', date);
-      
-      const response = await fetch(`http://localhost:5000/api/expenses?${params}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setExpenses(data.expenses);
-      } else {
-        setError('Failed to fetch expenses');
-      }
+      const data = await fetchExpensesRequest({
+        category,
+        start_date: date,
+      });
+      setExpenses(data.expenses || []);
     } catch (err) {
       console.error('Error fetching expenses:', err);
-      setError('Failed to connect to server');
+      setError(err.message || 'Failed to connect to server');
     } finally {
       setLoading(false);
     }

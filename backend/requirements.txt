@@ -22,3 +22,4 @@ accelerate>=0.33.0
 huggingface_hub>=0.24.0
 paddlepaddle
 paddleocr
+pymongo>=4.10.1

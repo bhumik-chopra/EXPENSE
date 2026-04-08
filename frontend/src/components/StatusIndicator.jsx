@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, LoaderCircle } from "lucide-react";
+import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 
 export default function StatusIndicator() {
   const [status, setStatus] = useState("checking");
 
   async function checkBackendStatus() {
     try {
-      const response = await fetch("http://localhost:5000/api/expenses");
-      setStatus(response.ok ? "online" : "offline");
+      await fetchExpensesRequest();
+      setStatus("online");
     } catch (error) {
       console.error("Backend status check failed:", error);
       setStatus("offline");

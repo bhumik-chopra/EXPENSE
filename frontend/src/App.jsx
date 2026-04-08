@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
 import UploadCard from "./components/UploadCard";
+import Charts from "./components/Charts";
 import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import LoginPage from "./components/LoginPage";
 import { ThemeContext } from "./components/ThemeContext";
+import { clearCurrentUser, persistCurrentUser } from "./utils/api";
 
 export default function App() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -70,9 +72,19 @@ export default function App() {
       }
     : null;
 
+  useLayoutEffect(() => {
+    if (user?.id) {
+      persistCurrentUser(user);
+      return;
+    }
+
+    clearCurrentUser();
+  }, [user]);
+
   let content;
   if (page === "Dashboard") content = <Dashboard />;
   else if (page === "Upload Receipt") content = <UploadCard />;
+  else if (page === "Charts") content = <Charts />;
   else if (page === "Reports") content = <Reports />;
   else if (page === "Settings") {
     content = <Settings user={user} onLogout={handleLogout} />;
