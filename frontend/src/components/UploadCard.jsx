@@ -42,20 +42,48 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
   const numericFallback = Number(fallbackAmount);
   if (!cleanText) return Number.isFinite(numericFallback) ? numericFallback : 0;
 
+  const normalizedText = cleanText.replace(/\s+/g, " ").trim();
   const lines = cleanText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   const parseAmounts = (line) =>
-    [...line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2})/g)]
+    [...line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?/g)]
       .map((match) => Number(match[0].replace(/,/g, "")))
       .filter((value) => Number.isFinite(value) && value > 0);
 
-  const grandTotalLine = lines.find((line) => /grand\s+total|net\s+total|amount\s+due/i.test(line));
-  if (grandTotalLine) {
-    const values = parseAmounts(grandTotalLine);
-    if (values.length) return values[values.length - 1];
+  const findAmountAfterLabel = (sourceText, labels) => {
+    for (const label of labels) {
+      const pattern = new RegExp(
+        `${label}[^\\d]{0,24}(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?)`,
+        "i"
+      );
+      const match = sourceText.match(pattern);
+      if (match) {
+        const value = Number(match[1].replace(/,/g, ""));
+        if (Number.isFinite(value) && value > 0) {
+          return value;
+        }
+      }
+    }
+    return 0;
+  };
+
+  const prioritizedLabeledAmount = findAmountAfterLabel(normalizedText, [
+    "net\\s+to\\s+pay",
+    "grand\\s+total",
+    "amount\\s+due",
+    "total\\s+payable",
+    "invoice\\s+total",
+    "net\\s+total",
+  ]);
+
+  if (prioritizedLabeledAmount > 0) {
+    if (Number.isFinite(numericFallback) && numericFallback > 0) {
+      return Math.max(prioritizedLabeledAmount, numericFallback);
+    }
+    return prioritizedLabeledAmount;
   }
 
   let subtotal = 0;
@@ -68,13 +96,13 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
     const values = parseAmounts(line);
     if (!values.length) continue;
 
-    if (/grand\s+total|net\s+total|amount\s+due/i.test(lower)) {
+    if (/net\s+to\s+pay|grand\s+total|amount\s+due|invoice\s+total|net\s+total/i.test(lower)) {
       return values[values.length - 1];
     }
 
-    if (/\btotal\b/.test(lower) && !/subtotal|grand total/i.test(lower)) {
+    if (/\btotal\b/.test(lower) && !/subtotal|grand total|net to pay/i.test(lower)) {
       const candidate = values[values.length - 1];
-      if (!Number.isFinite(numericFallback) || candidate > numericFallback) {
+      if (!Number.isFinite(numericFallback) || candidate >= numericFallback) {
         return candidate;
       }
     }

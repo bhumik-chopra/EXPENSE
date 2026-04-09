@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from bson import ObjectId
+from prediction_service import DEFAULT_MONTHLY_BUDGET, generate_predictions
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -135,25 +137,63 @@ class MongoExpenseStore:
         self.expenses = None
         self.users = None
         self.error = None
+        self._last_connect_attempt = 0.0
+        self._retry_cooldown_seconds = 3.0
 
         if not self.uri:
             self.error = "MongoDB connection string is not configured."
             return
 
+        self._connect(force=True)
+
+    def _connect(self, force: bool = False) -> bool:
+        if not self.uri:
+            self.error = "MongoDB connection string is not configured."
+            return False
+
+        now = time.monotonic()
+        if not force and (now - self._last_connect_attempt) < self._retry_cooldown_seconds:
+            return self.is_ready
+
+        self._last_connect_attempt = now
+
         try:
-            self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
-            self.client.admin.command("ping")
-            self.db = self.client[self.db_name]
-            self.expenses = self.db["expenses"]
-            self.users = self.db["users"]
-            self.expenses.create_index([("user_id", 1), ("date", -1), ("createdAt", -1)])
-            self.users.create_index(
+            client = MongoClient(
+                self.uri,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000,
+            )
+            client.admin.command("ping")
+
+            db = client[self.db_name]
+            expenses = db["expenses"]
+            users = db["users"]
+            expenses.create_index([("user_id", 1), ("date", -1), ("createdAt", -1)])
+            users.create_index(
                 "user_id",
                 unique=True,
                 partialFilterExpression={"user_id": {"$type": "string"}},
             )
+
+            self.client = client
+            self.db = db
+            self.expenses = expenses
+            self.users = users
+            self.error = None
+            return True
         except Exception as exc:
+            self.client = None
+            self.db = None
+            self.expenses = None
+            self.users = None
             self.error = str(exc)
+            return False
+
+    def ensure_ready(self) -> bool:
+        if self.is_ready:
+            return True
+        return self._connect()
 
     @property
     def is_ready(self) -> bool:
@@ -181,6 +221,36 @@ class MongoExpenseStore:
             },
             upsert=True,
         )
+
+    def get_user_budget(self, user: dict) -> float:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        self.ensure_user(user)
+        doc = self.users.find_one({"user_id": user["id"]}, {"monthly_budget": 1})
+        raw_budget = (doc or {}).get("monthly_budget", DEFAULT_MONTHLY_BUDGET)
+        try:
+            budget = float(raw_budget)
+        except (TypeError, ValueError):
+            budget = DEFAULT_MONTHLY_BUDGET
+        return budget if budget > 0 else DEFAULT_MONTHLY_BUDGET
+
+    def set_user_budget(self, user: dict, monthly_budget: float) -> float:
+        if not self.is_ready:
+            raise RuntimeError(self.error or "MongoDB is unavailable.")
+
+        self.ensure_user(user)
+        budget = float(monthly_budget)
+        self.users.update_one(
+            {"user_id": user["id"]},
+            {
+                "$set": {
+                    "monthly_budget": budget,
+                    "updatedAt": datetime.utcnow().isoformat(),
+                }
+            },
+        )
+        return budget
 
     def create_expense(self, user: dict, expense: dict) -> dict:
         if not self.is_ready:
@@ -268,9 +338,9 @@ def get_request_user():
 
 
 def require_expense_store():
-    if expense_store.is_ready:
+    if expense_store.ensure_ready():
         return None
-    return jsonify({"error": expense_store.error or "MongoDB is unavailable."}), 503
+    return jsonify({"error": "Expense data is temporarily unavailable. Reconnecting to storage."}), 503
 
 
 class ReceiptProcessor:
@@ -394,7 +464,9 @@ class ReceiptProcessor:
                 if not any(token and token in line for token in variants):
                     continue
 
-                if "grand total" in lower:
+                if "net to pay" in lower:
+                    score += 95
+                elif "grand total" in lower:
                     score += 80
                 elif "net total" in lower or "invoice total" in lower or "amount due" in lower:
                     score += 65
@@ -489,7 +561,7 @@ class ReceiptProcessor:
         if not collapsed:
             return 0.0
 
-        amount_pattern = r"(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2}))"
+        amount_pattern = r"(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)"
 
         def parse_amount(raw: str) -> float:
             try:
@@ -507,7 +579,9 @@ class ReceiptProcessor:
                         values.append(value)
             return values
 
-        grand_total_values = find_after_labels(("grand\\s*total", "amount\\s*due", "net\\s*total", "total\\s*payable"))
+        grand_total_values = find_after_labels(
+            ("net\\s*to\\s*pay", "grand\\s*total", "amount\\s*due", "net\\s*total", "total\\s*payable")
+        )
         if grand_total_values:
             return max(grand_total_values)
 
@@ -537,7 +611,7 @@ class ReceiptProcessor:
         subtotal_candidates = []
         grand_total_candidates = []
 
-        amount_pattern = re.compile(r"\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2})")
+        amount_pattern = re.compile(r"\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?")
         for line in lines:
             lower = line.lower()
             values = []
@@ -1272,6 +1346,56 @@ def analytics():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/budget", methods=["GET", "PUT"])
+def budget():
+    try:
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
+        if request.method == "PUT":
+            data = request.get_json(silent=True) or {}
+            raw_budget = data.get("monthly_budget")
+            try:
+                monthly_budget = float(raw_budget)
+            except (TypeError, ValueError):
+                return jsonify({"error": "Monthly budget must be a valid number."}), 400
+
+            if monthly_budget <= 0:
+                return jsonify({"error": "Monthly budget must be greater than 0."}), 400
+
+            saved_budget = expense_store.set_user_budget(user, monthly_budget)
+            return jsonify({"success": True, "monthly_budget": round(saved_budget, 2)})
+
+        monthly_budget = expense_store.get_user_budget(user)
+        return jsonify({"success": True, "monthly_budget": round(monthly_budget, 2)})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/predictions", methods=["GET"])
+def predictions():
+    try:
+        store_error = require_expense_store()
+        if store_error:
+            return store_error
+
+        user, error_response, status_code = get_request_user()
+        if error_response:
+            return error_response, status_code
+
+        expenses = expense_store.list_expenses(user["id"])
+        monthly_budget = expense_store.get_user_budget(user)
+        payload = generate_predictions(expenses, amount_to_inr, monthly_budget)
+        return jsonify(payload)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/expenses/clear", methods=["DELETE"])
 def clear_expenses():
     try:
@@ -1291,6 +1415,7 @@ def clear_expenses():
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
+    expense_store.ensure_ready()
     return jsonify(
         {
             "status": "healthy",

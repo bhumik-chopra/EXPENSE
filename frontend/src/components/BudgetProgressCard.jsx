@@ -4,7 +4,7 @@ import { Settings, Target, TrendingUp, AlertTriangle } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
-import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
+import { fetchBudget, fetchExpenses as fetchExpensesRequest, updateBudget } from "../utils/api";
 
 const toInr = (expense) => {
   const currency = String(expense?.currency || "INR").toUpperCase();
@@ -14,17 +14,29 @@ const toInr = (expense) => {
 
 export default function BudgetProgressCard() {
   const { theme } = useTheme();
-  const parsedBudget =
-    typeof window !== "undefined" ? Number.parseFloat(window.localStorage.getItem("monthlyBudget")) : NaN;
-  const initialBudget = Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : 10000;
+  const initialBudget = 10000;
 
   const [budget, setBudget] = useState(initialBudget);
   const [spent, setSpent] = useState(0);
   const [expenses, setExpenses] = useState([]);
   const [showBudgetSetter, setShowBudgetSetter] = useState(false);
   const [newBudget, setNewBudget] = useState(initialBudget.toString());
+  const [isSavingBudget, setIsSavingBudget] = useState(false);
 
-  async function fetchExpenses() {
+  async function loadBudget() {
+    try {
+      const data = await fetchBudget();
+      const nextBudget = Number(data.monthly_budget || initialBudget);
+      if (Number.isFinite(nextBudget) && nextBudget > 0) {
+        setBudget(nextBudget);
+        setNewBudget(nextBudget.toString());
+      }
+    } catch (error) {
+      console.error("Error fetching budget:", error);
+    }
+  }
+
+  async function loadExpenses() {
     try {
       const data = await fetchExpensesRequest();
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -43,17 +55,37 @@ export default function BudgetProgressCard() {
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
-      fetchExpenses();
+      loadBudget();
+      loadExpenses();
     }, 0);
 
     const handleExpenseAdded = () => {
-      fetchExpenses();
+      loadExpenses();
+    };
+
+    const handleExpenseDeleted = () => {
+      loadExpenses();
+    };
+
+    const handleBudgetUpdated = () => {
+      loadBudget();
+    };
+
+    const handleBackendRecovered = () => {
+      loadBudget();
+      loadExpenses();
     };
 
     window.addEventListener("expenseAdded", handleExpenseAdded);
+    window.addEventListener("expenseDeleted", handleExpenseDeleted);
+    window.addEventListener("budgetUpdated", handleBudgetUpdated);
+    window.addEventListener("backendRecovered", handleBackendRecovered);
     return () => {
       window.clearTimeout(timerId);
       window.removeEventListener("expenseAdded", handleExpenseAdded);
+      window.removeEventListener("expenseDeleted", handleExpenseDeleted);
+      window.removeEventListener("budgetUpdated", handleBudgetUpdated);
+      window.removeEventListener("backendRecovered", handleBackendRecovered);
     };
   }, []);
 
@@ -61,12 +93,22 @@ export default function BudgetProgressCard() {
   const remaining = budget - spent;
   const isOverBudget = spent > budget;
 
-  const handleBudgetUpdate = () => {
+  const handleBudgetUpdate = async () => {
     const budgetValue = Number(newBudget);
     if (budgetValue > 0) {
-      setBudget(budgetValue);
-      setShowBudgetSetter(false);
-      window.localStorage.setItem("monthlyBudget", budgetValue.toString());
+      try {
+        setIsSavingBudget(true);
+        const response = await updateBudget(budgetValue);
+        const savedBudget = Number(response.monthly_budget || budgetValue);
+        setBudget(savedBudget);
+        setNewBudget(savedBudget.toString());
+        setShowBudgetSetter(false);
+        window.dispatchEvent(new CustomEvent("budgetUpdated", { detail: { monthlyBudget: savedBudget } }));
+      } catch (error) {
+        console.error("Error saving budget:", error);
+      } finally {
+        setIsSavingBudget(false);
+      }
     }
   };
 
@@ -120,9 +162,10 @@ export default function BudgetProgressCard() {
             />
             <button
               onClick={handleBudgetUpdate}
+              disabled={isSavingBudget}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
             >
-              Set
+              {isSavingBudget ? "Saving..." : "Set"}
             </button>
           </div>
         </div>

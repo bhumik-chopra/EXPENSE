@@ -68,12 +68,51 @@ export async function apiFetch(path, options = {}) {
   return response;
 }
 
+async function parseResponsePayload(response) {
+  const contentType = response.headers.get("content-type") || "";
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return {};
+  }
+
+  if (contentType.includes("application/json")) {
+    return JSON.parse(rawText);
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return {
+      error: rawText.startsWith("<")
+        ? "The backend is restarting. Please wait a moment."
+        : rawText,
+    };
+  }
+}
+
+function normalizeApiErrorMessage(message, status) {
+  const text = String(message || "").trim();
+  const lowerText = text.toLowerCase();
+
+  if (
+    status === 503 ||
+    lowerText.includes("replicasetnoprimary") ||
+    lowerText.includes("no replica set members found") ||
+    lowerText.includes("mongodb is unavailable")
+  ) {
+    return "Expense data is temporarily unavailable. The app is reconnecting to storage.";
+  }
+
+  return text || `Request failed with status ${status}`;
+}
+
 export async function readJson(path, options = {}) {
   const response = await apiFetch(path, options);
-  const payload = await response.json();
+  const payload = await parseResponsePayload(response);
 
   if (!response.ok) {
-    throw new Error(payload.error || `Request failed with status ${response.status}`);
+    throw new Error(normalizeApiErrorMessage(payload.error, response.status));
   }
 
   return payload;
@@ -122,4 +161,23 @@ export async function deleteExpense(expenseId) {
 
 export async function fetchAnalytics() {
   return readJson("/api/analytics");
+}
+
+export async function fetchBudget() {
+  return readJson("/api/budget");
+}
+
+export async function updateBudget(monthlyBudget) {
+  return readJson("/api/budget", {
+    method: "PUT",
+    body: JSON.stringify({ monthly_budget: monthlyBudget }),
+  });
+}
+
+export async function fetchPredictions() {
+  return readJson("/api/predictions");
+}
+
+export async function fetchHealth() {
+  return readJson("/api/health");
 }

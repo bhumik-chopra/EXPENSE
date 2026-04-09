@@ -1,33 +1,76 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, LoaderCircle } from "lucide-react";
-import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
+import { fetchHealth } from "../utils/api";
+
+const BACKEND_RECOVERY_KEY = "expense-tracker-backend-recovery-pending";
+const BACKEND_RECOVERED_EVENT = "backendRecovered";
 
 export default function StatusIndicator() {
   const [status, setStatus] = useState("checking");
+  const statusRef = useRef("checking");
+  const recoveryEventSentRef = useRef(false);
 
   async function checkBackendStatus() {
     try {
-      await fetchExpensesRequest();
-      setStatus("online");
+      const health = await fetchHealth();
+      const nextStatus = health?.status === "healthy" ? "online" : "offline";
+      const previousStatus = statusRef.current;
+
+      statusRef.current = nextStatus;
+      setStatus(nextStatus);
+
+      if (nextStatus === "offline" && typeof window !== "undefined") {
+        window.sessionStorage.setItem(BACKEND_RECOVERY_KEY, "true");
+      }
+
+      if (
+        nextStatus === "online" &&
+        previousStatus === "offline" &&
+        typeof window !== "undefined" &&
+        window.sessionStorage.getItem(BACKEND_RECOVERY_KEY) === "true" &&
+        !recoveryEventSentRef.current
+      ) {
+        recoveryEventSentRef.current = true;
+        window.sessionStorage.removeItem(BACKEND_RECOVERY_KEY);
+        window.dispatchEvent(new CustomEvent(BACKEND_RECOVERED_EVENT));
+      }
+
+      if (nextStatus !== "online") {
+        recoveryEventSentRef.current = false;
+      }
     } catch (error) {
       console.error("Backend status check failed:", error);
+      statusRef.current = "offline";
       setStatus("offline");
+      recoveryEventSentRef.current = false;
+
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(BACKEND_RECOVERY_KEY, "true");
+      }
     }
   }
 
   useEffect(() => {
-    const timerId = window.setTimeout(() => {
-      checkBackendStatus();
-    }, 0);
+    let cancelled = false;
+    let timerId;
 
-    const intervalId = window.setInterval(() => {
-      checkBackendStatus();
-    }, 30000);
+    const scheduleNextCheck = (delay) => {
+      timerId = window.setTimeout(async () => {
+        await checkBackendStatus();
+
+        if (!cancelled) {
+          const nextDelay = statusRef.current === "online" ? 30000 : 3000;
+          scheduleNextCheck(nextDelay);
+        }
+      }, delay);
+    };
+
+    scheduleNextCheck(0);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(timerId);
-      window.clearInterval(intervalId);
     };
   }, []);
 

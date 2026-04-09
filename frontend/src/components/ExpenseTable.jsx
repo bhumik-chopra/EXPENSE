@@ -43,10 +43,12 @@ export default function ExpenseTable() {
     
     window.addEventListener('expenseAdded', handleExpenseChange);
     window.addEventListener('expenseDeleted', handleExpenseChange);
+    window.addEventListener('backendRecovered', handleExpenseChange);
     
     return () => {
       window.removeEventListener('expenseAdded', handleExpenseChange);
       window.removeEventListener('expenseDeleted', handleExpenseChange);
+      window.removeEventListener('backendRecovered', handleExpenseChange);
     };
   }, [fetchExpenses]);
 

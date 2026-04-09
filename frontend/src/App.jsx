@@ -8,6 +8,7 @@ import Charts from "./components/Charts";
 import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import LoginPage from "./components/LoginPage";
+import Bhavishyvani from "./components/Bhavishyvani";
 import { ThemeContext } from "./components/ThemeContext";
 import { clearCurrentUser, persistCurrentUser } from "./utils/api";
 
@@ -85,6 +86,7 @@ export default function App() {
   if (page === "Dashboard") content = <Dashboard />;
   else if (page === "Upload Receipt") content = <UploadCard />;
   else if (page === "Charts") content = <Charts />;
+  else if (page === "BHAVISHYVANI") content = <Bhavishyvani />;
   else if (page === "Reports") content = <Reports />;
   else if (page === "Settings") {
     content = <Settings user={user} onLogout={handleLogout} />;

@@ -14,6 +14,16 @@ export default function Reports() {
 
   useEffect(() => {
     fetchExpenses();
+
+    const handleBackendRecovered = () => {
+      fetchExpenses();
+    };
+
+    window.addEventListener("backendRecovered", handleBackendRecovered);
+
+    return () => {
+      window.removeEventListener("backendRecovered", handleBackendRecovered);
+    };
   }, []);
 
   useEffect(() => {

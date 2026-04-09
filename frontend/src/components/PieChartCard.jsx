@@ -54,11 +54,13 @@ export default function PieChartCard() {
 
     window.addEventListener("expenseAdded", handleExpenseChange);
     window.addEventListener("expenseDeleted", handleExpenseChange);
+    window.addEventListener("backendRecovered", handleExpenseChange);
 
     return () => {
       window.clearTimeout(timerId);
       window.removeEventListener("expenseAdded", handleExpenseChange);
       window.removeEventListener("expenseDeleted", handleExpenseChange);
+      window.removeEventListener("backendRecovered", handleExpenseChange);
     };
   }, []);
 

@@ -580,7 +580,7 @@ def process_receipt(image_path: str) -> dict:
         result["confidence"]   = round(confidence, 3)
         result["total_amount"] = total_amount   # float or None
         result["date"]         = date           # ISO string or None
-        result["raw_text"]     = raw_text[:300]
+        result["raw_text"]     = raw_text
 
     except Exception as e:
         result["error"] = str(e)
