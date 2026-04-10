@@ -10,6 +10,7 @@ import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 export default function ExpenseTable() {
   const { theme } = useTheme();
   const [expenses, setExpenses] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState(["All Categories"]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [category, setCategory] = useState("All Categories");
@@ -33,12 +34,29 @@ export default function ExpenseTable() {
     }
   }, [category, date]);
 
+  const fetchAvailableCategories = useCallback(async () => {
+    try {
+      const data = await fetchExpensesRequest();
+      const nextCategories = [
+        "All Categories",
+        ...new Set((data.expenses || []).map((expense) => expense.category).filter(Boolean)),
+      ];
+      setAvailableCategories(nextCategories);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchExpenses();
+    fetchAvailableCategories();
     
     // Listen for expense changes to refresh data
     const handleExpenseChange = () => {
-      setTimeout(fetchExpenses, 500);
+      setTimeout(() => {
+        fetchExpenses();
+        fetchAvailableCategories();
+      }, 500);
     };
     
     window.addEventListener('expenseAdded', handleExpenseChange);
@@ -50,7 +68,7 @@ export default function ExpenseTable() {
       window.removeEventListener('expenseDeleted', handleExpenseChange);
       window.removeEventListener('backendRecovered', handleExpenseChange);
     };
-  }, [fetchExpenses]);
+  }, [fetchAvailableCategories, fetchExpenses]);
 
   useEffect(() => {
     const syncCurrentDate = () => {
@@ -80,9 +98,6 @@ export default function ExpenseTable() {
     return `$${amount?.toFixed(2)}`;
   };
 
-  // Get unique categories for filter dropdown
-  const categories = ['All Categories', ...new Set(expenses.map(e => e.category))];
-
   const cardContent = (
     <Motion.div
       className="bg-white rounded-xl shadow p-6"
@@ -107,7 +122,7 @@ export default function ExpenseTable() {
             value={category} 
             onChange={e => setCategory(e.target.value)}
           >
-            {categories.map(cat => (
+            {availableCategories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>

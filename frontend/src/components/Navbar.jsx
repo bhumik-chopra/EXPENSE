@@ -25,7 +25,7 @@ export default function Navbar({
 
   return (
     <Motion.nav
-      className="flex items-center justify-between gap-3 px-4 py-3 md:h-16 md:px-6 bg-white shadow-sm"
+      className="flex flex-wrap items-center justify-between gap-3 bg-white px-3 py-3 shadow-sm sm:px-4 md:h-16 md:flex-nowrap md:px-6"
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -56,10 +56,10 @@ export default function Navbar({
             transition={{ duration: 0.42, ease: "easeInOut" }}
           />
         </div>
-        <h1 className="truncate text-lg font-bold tracking-tight md:text-xl">Expense Tracker</h1>
+        <h1 className="truncate text-base font-bold tracking-tight sm:text-lg md:text-xl">Expense Tracker</h1>
       </div>
       
-      <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex w-full items-center justify-end gap-2 sm:w-auto md:gap-4">
         <StatusIndicator />
         <Motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
           <ThemeToggle
@@ -69,7 +69,7 @@ export default function Navbar({
           />
         </Motion.div>
         <Motion.button
-          className="hidden items-center gap-3 rounded-full px-3 py-2 hover:bg-gray-100 transition sm:flex"
+          className="hidden max-w-[240px] items-center gap-3 rounded-full px-3 py-2 transition hover:bg-gray-100 sm:flex"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={onOpenSettings}
@@ -83,6 +83,17 @@ export default function Navbar({
             <span className="block truncate text-xs text-gray-600">@{user?.username}</span>
           </span>
           <Settings size={18} />
+        </Motion.button>
+        <Motion.button
+          className="inline-flex items-center justify-center rounded-full p-2 transition hover:bg-gray-100 sm:hidden"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={onOpenSettings}
+          title="Open settings"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+            {initials}
+          </span>
         </Motion.button>
         <Motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
           <LogoutButton theme={theme} onClick={onLogout} />

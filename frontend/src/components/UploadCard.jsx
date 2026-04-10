@@ -1,6 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
+  Camera,
   CheckCircle,
   Edit3,
   FileText,
@@ -8,6 +9,7 @@ import {
   Plus,
   Sparkles,
   UploadCloud,
+  X,
 } from "lucide-react";
 import { motion as Motion } from "framer-motion";
 import BorderGlow from "./BorderGlow";
@@ -134,6 +136,8 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
 export default function UploadCard() {
   const { theme } = useTheme();
   const fileInput = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -142,6 +146,30 @@ export default function UploadCard() {
   const [extractedData, setExtractedData] = useState(null);
   const [editableData, setEditableData] = useState(null);
   const [manualData, setManualData] = useState(emptyManualData);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  useEffect(() => {
+    if (!cameraOpen || !cameraStream || !videoRef.current) {
+      return;
+    }
+
+    videoRef.current.srcObject = cameraStream;
+    videoRef.current
+      .play()
+      .then(() => setCameraReady(true))
+      .catch(() => setError("Unable to start the webcam preview."));
+  }, [cameraOpen, cameraStream]);
 
   const resetProcessedReceipt = () => {
     setExtractedData(null);
@@ -214,6 +242,77 @@ export default function UploadCard() {
     }
   };
 
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraReady(false);
+    setCameraOpen(false);
+  };
+
+  const openCamera = async () => {
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      setCameraStream(stream);
+      setCameraOpen(true);
+      setCameraReady(false);
+    } catch (err) {
+      setError("Unable to access your webcam. Please allow camera permission and try again.");
+    }
+  };
+
+  const captureFromCamera = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      setError("Unable to capture the webcam image.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, width, height);
+
+    const capturedFile = await new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          resolve(new File([blob], `webcam-receipt-${Date.now()}.jpg`, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.92
+      );
+    });
+
+    if (!capturedFile) {
+      setError("Unable to create an image from the webcam capture.");
+      return;
+    }
+
+    closeCamera();
+    await handleFile(capturedFile);
+  };
+
   const handleSaveExpense = async () => {
     const activeData = manualEntry ? manualData : editableData;
     if (!activeData) return;
@@ -274,6 +373,7 @@ export default function UploadCard() {
 
   const onDrop = (event) => {
     event.preventDefault();
+    setIsDragActive(false);
     const file = event.dataTransfer.files?.[0];
     if (file) {
       handleFile(file);
@@ -352,26 +452,73 @@ export default function UploadCard() {
           </button>
         </div>
       ) : (
-        <div
-          className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition hover:border-blue-400"
-          onDrop={onDrop}
-          onDragOver={(event) => event.preventDefault()}
-          onClick={() => fileInput.current?.click()}
-        >
-          <div className="mb-3 flex items-center gap-3">
-            <Image size={28} className="text-blue-400" />
-            <FileText size={28} className="text-red-400" />
+        <div className="space-y-3">
+          <div
+            className={`flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition ${
+              isDragActive
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 hover:border-blue-400"
+            }`}
+            onDrop={onDrop}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDragActive(true);
+            }}
+            onDragLeave={() => setIsDragActive(false)}
+            onClick={() => fileInput.current?.click()}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <Image size={28} className="text-blue-400" />
+              <FileText size={28} className="text-red-400" />
+            </div>
+            <UploadCloud size={32} className="mb-2 text-gray-400" />
+            <span className="font-medium text-gray-700">
+              {isDragActive ? "Drop your receipt here" : "Upload Invoice or Receipt"}
+            </span>
+            <span className="text-sm text-gray-500">Supports JPG, PNG, BMP, GIF, and PDF</span>
+            <input
+              ref={fileInput}
+              type="file"
+              className="hidden"
+              accept="image/*,application/pdf"
+              onChange={(event) => handleFile(event.target.files?.[0])}
+            />
           </div>
-          <UploadCloud size={32} className="mb-2 text-gray-400" />
-          <span className="font-medium text-gray-700">Upload Invoice or Receipt</span>
-          <span className="text-sm text-gray-500">Supports JPG, PNG, BMP, GIF, and PDF</span>
-          <input
-            ref={fileInput}
-            type="file"
-            className="hidden"
-            accept="image/*,application/pdf"
-            onChange={(event) => handleFile(event.target.files?.[0])}
-          />
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={cameraOpen ? closeCamera : openCamera}
+              className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm transition ${
+                cameraOpen
+                  ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                  : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              {cameraOpen ? <X size={16} /> : <Camera size={16} />}
+              {cameraOpen ? "Close Camera" : "Use Webcam"}
+            </button>
+          </div>
+
+          {cameraOpen && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <div className="overflow-hidden rounded-lg bg-slate-950">
+                <video ref={videoRef} autoPlay playsInline muted className="h-56 w-full object-cover" />
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={captureFromCamera}
+                  disabled={!cameraReady || loading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Camera size={16} />
+                  Capture Receipt
+                </button>
+              </div>
+            </div>
+          )}
+          <canvas ref={canvasRef} className="hidden" />
         </div>
       )}
 

@@ -84,7 +84,7 @@ function PieChart({ data, theme }) {
     <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       <Motion.svg
         viewBox="0 0 120 120"
-        className="mx-auto h-64 w-64 -rotate-90"
+        className="mx-auto h-52 w-52 max-w-full -rotate-90 sm:h-64 sm:w-64"
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
       >
@@ -199,7 +199,7 @@ function LineChart({ data, theme }) {
 
   return (
     <div className="space-y-4">
-      <svg width={280} height={180} viewBox="0 0 120 120" className="mx-auto overflow-visible">
+      <svg viewBox="0 0 120 120" className="mx-auto h-[180px] w-full max-w-[280px] overflow-visible">
         <line x1="14" y1="96" x2="106" y2="96" stroke={axisColor} strokeWidth="1.2" />
         <line x1="14" y1="20" x2="14" y2="96" stroke={axisColor} strokeWidth="1.2" />
         {points.length > 1 ? (
@@ -333,7 +333,7 @@ export default function Charts() {
     theme === "dark"
       ? "inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-sky-200"
       : "inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-sky-700";
-  const heroTitleClassName = "text-3xl font-semibold tracking-tight";
+  const heroTitleClassName = "text-2xl font-semibold tracking-tight sm:text-3xl";
   const heroTextClassName = "text-sm leading-6";
   const fieldLabelClassName = "text-xs font-semibold uppercase tracking-[0.16em]";
   const inputClassName =
@@ -453,11 +453,11 @@ export default function Charts() {
               />
             </label>
 
-            <div className="flex items-end gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <button
                 type="button"
                 onClick={loadChartData}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                className="inline-flex w-full flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
                 style={{ color: "#ffffff" }}
               >
                 <Filter size={16} />
@@ -466,7 +466,7 @@ export default function Charts() {
               <button
                 type="button"
                 onClick={loadChartData}
-                className={refreshButtonClassName}
+                className={`${refreshButtonClassName} w-full sm:w-auto`}
                 style={{ color: refreshButtonColor }}
                 title="Refresh chart data"
               >
@@ -479,14 +479,16 @@ export default function Charts() {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className={cardClassName}>
-          <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className={visualTitleClassName} style={{ color: visualTitleColor }}>Visual Report</h3>
               <p className={visualTextClassName} style={{ color: visualTextColor }}>Filtered by the dates you selected.</p>
             </div>
-            <div className={pillClassName} style={{ color: pillColor }}>
+            <div className={`${pillClassName} max-w-full`} style={{ color: pillColor }}>
               <CalendarRange size={14} />
-              {startDate || endDate ? `${startDate || "Start"} to ${endDate || "Now"}` : "All dates"}
+              <span className="truncate">
+                {startDate || endDate ? `${startDate || "Start"} to ${endDate || "Now"}` : "All dates"}
+              </span>
             </div>
           </div>
 

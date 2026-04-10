@@ -5,31 +5,32 @@ import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
 import { fetchPredictions } from "../utils/api";
+import "./Bhavishyvani.css";
 
 const riskTone = {
   safe: {
     icon: Target,
     label: "On Track",
     light: "border-green-300 bg-green-100 text-green-800",
-    dark: "border-green-400/35 bg-green-500/20 text-green-100",
+    dark: "border-green-500 bg-green-600 text-green-50",
     lightCard: "border-green-300 bg-gradient-to-br from-green-100 via-emerald-100 to-lime-50",
-    darkCard: "border-green-400/35 bg-gradient-to-br from-green-500/25 via-emerald-500/20 to-lime-400/15",
+    darkCard: "border-green-500 bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_0_30px_rgba(34,197,94,0.4)]",
   },
   warning: {
     icon: TrendingUp,
     label: "Watch Closely",
     light: "border-yellow-200 bg-yellow-50 text-yellow-700",
-    dark: "border-yellow-400/20 bg-yellow-400/10 text-yellow-200",
+    dark: "border-amber-600/60 bg-amber-700/25 text-amber-100",
     lightCard: "border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50",
-    darkCard: "border-yellow-400/20 bg-gradient-to-br from-yellow-500/10 to-amber-400/10",
+    darkCard: "border-amber-600/60 bg-gradient-to-br from-amber-700/30 to-orange-700/20",
   },
   overspending: {
     icon: AlertTriangle,
     label: "High Risk",
     light: "border-red-300 bg-red-100 text-red-800",
-    dark: "border-red-400/35 bg-red-500/20 text-red-100",
+    dark: "border-red-500 bg-red-600 text-red-50",
     lightCard: "border-red-300 bg-gradient-to-br from-red-100 via-rose-100 to-orange-50",
-    darkCard: "border-red-400/35 bg-gradient-to-br from-red-500/25 via-rose-500/20 to-orange-400/15",
+    darkCard: "border-red-500 bg-gradient-to-br from-red-600 via-red-700 to-rose-800 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_0_30px_rgba(239,68,68,0.4)]",
   },
 };
 
@@ -97,6 +98,10 @@ export default function Bhavishyvani() {
     theme === "dark"
       ? "rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-slate-200"
       : "rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700";
+  const hoverHighlightClassName =
+    theme === "dark"
+      ? "group rounded-[28px] border border-white/10 transition-all duration-300 ease-out hover:border-violet-400/60 hover:shadow-[0_0_30px_rgba(167,139,250,0.3),0_0_60px_rgba(167,139,250,0.15)]"
+      : "group rounded-[28px] border border-slate-200/80 transition-all duration-300 ease-out hover:border-blue-400 hover:shadow-[0_0_30px_rgba(59,130,246,0.25),0_0_60px_rgba(59,130,246,0.12)]";
 
   const forecast = payload?.forecast;
   const risk = payload?.risk;
@@ -172,79 +177,107 @@ export default function Bhavishyvani() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              <div className={cardClassName}>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-500">
-                  <TrendingUp size={14} />
-                  Month-End Spend
+              <div className={hoverHighlightClassName}>
+                <div className={`${cardClassName} ${theme === "dark" ? "dark-mode-card-hover" : "light-mode-card-hover"} hover-lift card-scale-hover`}>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-500">
+                    <TrendingUp size={14} className="icon-hover-scale" />
+                    Month-End Spend
+                  </div>
+                  <p className="text-3xl font-semibold" style={{ color: heroTitleColor }}>
+                    {formatCurrency(forecast.predicted_month_end_spend)}
+                  </p>
+                  <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
+                    Current spend is {formatCurrency(risk.current_spend)} and the model projects the full month from your current pace.
+                  </p>
                 </div>
-                <p className="text-3xl font-semibold" style={{ color: heroTitleColor }}>
-                  {formatCurrency(forecast.predicted_month_end_spend)}
-                </p>
-                <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
-                  Current spend is {formatCurrency(risk.current_spend)} and the model projects the full month from your current pace.
-                </p>
               </div>
 
-              <div className={cardClassName}>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-500">
-                  <CalendarRange size={14} />
-                  Next 7 Days
+              <div className={hoverHighlightClassName}>
+                <div className={`${cardClassName} ${theme === "dark" ? "dark-mode-card-hover" : "light-mode-card-hover"} hover-lift card-scale-hover`}>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-500">
+                    <CalendarRange size={14} className="icon-hover-scale" />
+                    Next 7 Days
+                  </div>
+                  <p className="text-3xl font-semibold" style={{ color: heroTitleColor }}>
+                    {formatCurrency(forecast.predicted_next_7_days_spend)}
+                  </p>
+                  <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
+                    Short-term estimate based on recent spend behavior and the remaining month trajectory.
+                  </p>
                 </div>
-                <p className="text-3xl font-semibold" style={{ color: heroTitleColor }}>
-                  {formatCurrency(forecast.predicted_next_7_days_spend)}
-                </p>
-                <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
-                  Short-term estimate based on recent spend behavior and the remaining month trajectory.
-                </p>
               </div>
 
-              <div className={cardClassName}>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-purple-500">
-                  <BrainCircuit size={14} />
-                  Top Category
+              <div className={hoverHighlightClassName}>
+                <div className={`${cardClassName} ${theme === "dark" ? "dark-mode-card-hover" : "light-mode-card-hover"} hover-lift card-scale-hover`}>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-purple-500">
+                    <BrainCircuit size={14} className="icon-hover-scale" />
+                    Top Category
+                  </div>
+                  <p className="text-2xl font-semibold" style={{ color: heroTitleColor }}>
+                    {forecast.predicted_top_category || "Other"}
+                  </p>
+                  <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
+                    This is the category most likely to lead your spending by month end.
+                  </p>
                 </div>
-                <p className="text-2xl font-semibold" style={{ color: heroTitleColor }}>
-                  {forecast.predicted_top_category || "Other"}
-                </p>
-                <p className="mt-2 text-sm" style={{ color: subtitleColor }}>
-                  This is the category most likely to lead your spending by month end.
-                </p>
               </div>
             </div>
 
-            <div className={cardClassName}>
-              <h3 className="text-lg font-semibold" style={{ color: heroTitleColor }}>
-                Insights
-              </h3>
-              <div className="mt-4 space-y-3">
-                {insights.map((insight, index) => (
-                  <div key={`${insight}-${index}`} className={insightClassName}>
-                    {insight}
-                  </div>
-                ))}
+            <div className={hoverHighlightClassName}>
+              <div className={`${cardClassName} ${theme === "dark" ? "dark-mode-card-hover" : "light-mode-card-hover"} hover-lift card-scale-hover`}>
+                <h3 className="text-lg font-semibold" style={{ color: heroTitleColor }}>
+                  Insights
+                </h3>
+                <div className="mt-4 space-y-3">
+                  {insights.map((insight, index) => (
+                    <div key={`${insight}-${index}`} className={insightClassName}>
+                      {insight}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           <div className="space-y-5">
-            <div className={riskCardClassName}>
-              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${theme === "dark" ? tone.dark : tone.light}`}>
-                <RiskIcon size={14} />
-                {tone.label}
-              </div>
-              <div className="mt-5 space-y-4">
-                <div className={mutedPanelClassName}>
-                  <p className="text-sm" style={{ color: subtitleColor }}>Risk Label</p>
-                  <p className="mt-2 text-2xl font-semibold capitalize" style={{ color: heroTitleColor }}>
-                    {risk.label}
-                  </p>
+            <div
+              className={
+                theme === "dark"
+                  ? `rounded-[28px] border border-white/10 transition-all duration-300 ease-out ${
+                      risk.label === "overspending"
+                        ? "hover:border-red-400/70 hover:shadow-[0_0_30px_rgba(239,68,68,0.3),0_0_60px_rgba(239,68,68,0.15)]"
+                        : risk.label === "warning"
+                          ? "hover:border-amber-400/70 hover:shadow-[0_0_30px_rgba(217,119,6,0.3),0_0_60px_rgba(217,119,6,0.15)]"
+                          : "hover:border-emerald-400/70 hover:shadow-[0_0_30px_rgba(16,185,129,0.3),0_0_60px_rgba(16,185,129,0.15)]"
+                    }`
+                  : `rounded-[28px] border border-slate-200/80 transition-all duration-300 ease-out ${
+                      risk.label === "overspending"
+                        ? "hover:border-red-400 hover:shadow-[0_0_30px_rgba(239,68,68,0.25),0_0_60px_rgba(239,68,68,0.12)]"
+                        : risk.label === "warning"
+                          ? "hover:border-amber-400 hover:shadow-[0_0_30px_rgba(217,119,6,0.25),0_0_60px_rgba(217,119,6,0.12)]"
+                          : "hover:border-emerald-400 hover:shadow-[0_0_30px_rgba(16,185,129,0.25),0_0_60px_rgba(16,185,129,0.12)]"
+                    }`
+              }
+            >
+              <div className={`${riskCardClassName} ${theme === "dark" ? (risk.label === "overspending" ? "dark-risk-overspending" : risk.label === "warning" ? "dark-risk-warning" : "dark-risk-safe") : (risk.label === "overspending" ? "light-risk-overspending" : risk.label === "warning" ? "light-risk-warning" : "light-risk-safe")} risk-card-hover hover-lift card-scale-hover`}>
+                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${theme === "dark" ? tone.dark : tone.light}`}>
+                  <RiskIcon size={14} className="icon-hover-scale" />
+                  {tone.label}
                 </div>
+                <div className="mt-5 space-y-4">
+                  <div className={mutedPanelClassName}>
+                    <p className="text-sm" style={{ color: subtitleColor }}>Risk Label</p>
+                    <p className="mt-2 text-2xl font-semibold capitalize" style={{ color: heroTitleColor }}>
+                      {risk.label}
+                    </p>
+                  </div>
 
-                <div className={mutedPanelClassName}>
-                  <p className="text-sm" style={{ color: subtitleColor }}>Budget</p>
-                  <p className="mt-2 text-2xl font-semibold" style={{ color: heroTitleColor }}>
-                    {formatCurrency(risk.budget)}
-                  </p>
+                  <div className={mutedPanelClassName}>
+                    <p className="text-sm" style={{ color: subtitleColor }}>Budget</p>
+                    <p className="mt-2 text-2xl font-semibold" style={{ color: heroTitleColor }}>
+                      {formatCurrency(risk.budget)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

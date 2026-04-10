@@ -181,8 +181,8 @@ export default function Reports() {
   };
 
   const cardContent = (
-    <div className="bg-white rounded-xl shadow p-6">
-      <h2 className="text-2xl font-semibold mb-6">Download Monthly Expenses</h2>
+    <div className="rounded-xl bg-white p-4 shadow sm:p-6">
+      <h2 className="mb-6 text-xl font-semibold sm:text-2xl">Download Monthly Expenses</h2>
 
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:flex-wrap">
         <input
@@ -232,6 +232,7 @@ export default function Reports() {
         </div>
       ) : filteredExpenses.length > 0 ? (
         <div>
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -264,6 +265,7 @@ export default function Reports() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : (
         <div className="text-center py-8">

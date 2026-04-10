@@ -1,0 +1,123 @@
+/* Enhanced hover effects for Bhavishyvani cards */
+
+/* Group hover effect for prediction cards */
+.group:hover .hover-lift {
+  transform: translateY(-4px);
+  transition: all 0.3s ease-out;
+}
+
+/* Dark mode card hover - subtle glow effect */
+.dark-mode-card-hover {
+  transition: all 0.3s ease-out;
+}
+
+.group:hover .dark-mode-card-hover {
+  background: linear-gradient(
+    135deg,
+    rgba(167, 139, 250, 0.05) 0%,
+    rgba(139, 92, 246, 0.03) 100%
+  );
+}
+
+/* Light mode card hover - subtle glow effect */
+.light-mode-card-hover {
+  transition: all 0.3s ease-out;
+}
+
+.group:hover .light-mode-card-hover {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.04) 0%,
+    rgba(37, 99, 235, 0.02) 100%
+  );
+}
+
+/* Smooth hover transition for risk cards */
+.risk-card-hover {
+  transition: all 0.3s ease-out;
+}
+
+/* Dark mode risk card hover effects */
+.dark-risk-overspending:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.08) 0%,
+    rgba(220, 38, 38, 0.04) 100%
+  );
+}
+
+.dark-risk-warning:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.08) 0%,
+    rgba(180, 83, 9, 0.04) 100%
+  );
+}
+
+.dark-risk-safe:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.08) 0%,
+    rgba(5, 150, 105, 0.04) 100%
+  );
+}
+
+/* Light mode risk card hover effects */
+.light-risk-overspending:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.06) 0%,
+    rgba(220, 38, 38, 0.02) 100%
+  );
+}
+
+.light-risk-warning:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.06) 0%,
+    rgba(180, 83, 9, 0.02) 100%
+  );
+}
+
+.light-risk-safe:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.06) 0%,
+    rgba(5, 150, 105, 0.02) 100%
+  );
+}
+
+/* Glow effect for prediction cards on hover */
+@keyframes soft-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(167, 139, 250, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.15);
+  }
+}
+
+.dark-glow-animation:hover {
+  animation: soft-glow 0.6s ease-out forwards;
+}
+
+/* Scale effect on cards */
+.card-scale-hover {
+  transition: transform 0.3s ease-out;
+}
+
+.group:hover .card-scale-hover {
+  transform: scale(1.02);
+}
+
+/* Icon animation on hover */
+.icon-hover-scale {
+  transition: transform 0.3s ease-out;
+}
+
+.group:hover .icon-hover-scale {
+  transform: scale(1.1);
+}

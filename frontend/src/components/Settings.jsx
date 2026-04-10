@@ -33,7 +33,7 @@ export default function Settings({ user, onLogout }) {
       </div>
 
       <div className="mt-5 space-y-3">
-        <div className="flex items-center justify-between gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
+        <div className="flex items-center gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
               <UserRound size={18} />
@@ -47,7 +47,7 @@ export default function Settings({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
+        <div className="flex items-center gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
               <ShieldCheck size={18} />

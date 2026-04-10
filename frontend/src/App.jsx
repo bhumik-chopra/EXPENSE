@@ -119,7 +119,7 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ theme }}>
       <div
-        className={`app-shell flex min-h-screen min-h-dvh bg-gray-50 ${
+        className={`app-shell flex min-h-screen min-h-dvh overflow-x-hidden bg-gray-50 ${
           theme === "dark" ? "theme-dark" : "theme-light"
         }`}
       >
@@ -139,7 +139,7 @@ export default function App() {
             onOpenSettings={() => handlePageChange("Settings")}
             onLogout={handleLogout}
           />
-          <main className="flex-1 overflow-visible p-4 md:p-6">
+          <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6">
             {content}
           </main>
         </div>

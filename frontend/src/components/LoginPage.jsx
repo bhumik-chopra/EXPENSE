@@ -215,7 +215,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                 transition={{ duration: 0.42, ease: "easeInOut" }}
               />
             </div>
-            <h1 className="mt-1.5 text-[1.65rem] font-bold leading-tight">Sign in</h1>
+            <h1 className="mt-1.5 text-[1.4rem] font-bold leading-tight sm:text-[1.65rem]">Sign in</h1>
             <p className={`mt-1 text-[13px] ${isDark ? "text-slate-300" : "text-gray-600"}`}>
               {mode === "signin"
                 ? "Sign in with your email and password."
@@ -565,7 +565,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   return (
     <div
-      className={`relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 sm:py-5 ${
+      className={`relative flex min-h-screen min-h-dvh items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-4 sm:py-5 ${
         theme === "dark" ? "theme-dark" : "theme-light"
       }`}
       style={{
