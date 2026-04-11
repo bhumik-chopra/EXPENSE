@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -347,15 +348,36 @@ class ReceiptProcessor:
     def __init__(self) -> None:
         self.service_error = None
         self.ocr_service = None
-        try:
-            self.ocr_service = OCRService(models_dir=str(OCR_MODELS_DIR), use_gpu=False)
-        except Exception as exc:
-            self.service_error = str(exc)
-            print(f"OCR service failed to initialize: {exc}")
+        self._ocr_init_lock = threading.Lock()
+        self._ocr_init_attempted = False
 
     @property
     def is_ready(self) -> bool:
         return self.ocr_service is not None
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._ocr_init_attempted
+
+    def _ensure_ocr_service(self) -> bool:
+        if self.ocr_service is not None:
+            return True
+
+        with self._ocr_init_lock:
+            if self.ocr_service is not None:
+                return True
+
+            self._ocr_init_attempted = True
+            self.service_error = None
+
+            try:
+                self.ocr_service = OCRService(models_dir=str(OCR_MODELS_DIR), use_gpu=False)
+                return True
+            except Exception as exc:
+                self.ocr_service = None
+                self.service_error = str(exc)
+                print(f"OCR service failed to initialize: {exc}")
+                return False
 
     def process_image_upload(self, file_storage):
         suffix = Path(file_storage.filename or "receipt.jpg").suffix or ".jpg"
@@ -388,7 +410,7 @@ class ReceiptProcessor:
         return parsed
 
     def _build_receipt_payload(self, image_path: str, source: str):
-        if not self.is_ready:
+        if not self._ensure_ocr_service():
             return self._manual_entry_payload(
                 message=self.service_error or "OCR service is not available.",
                 source=source,
@@ -1582,6 +1604,7 @@ def health_check():
         {
             "status": "healthy",
             "ocr_ready": receipt_processor.is_ready,
+            "ocr_initialized": receipt_processor.is_initialized,
             "ocr_error": receipt_processor.service_error,
             "ocr_backend": getattr(receipt_processor.ocr_service, "ocr_backend", None),
             "mongo_ready": expense_store.is_ready,
@@ -1593,6 +1616,7 @@ def health_check():
 
 if __name__ == "__main__":
     print("Starting SmartSpend backend on http://localhost:5000")
+    print("OCR mode: lazy initialization")
     print(f"OCR ready: {receipt_processor.is_ready}")
     if receipt_processor.service_error:
         print(f"OCR initialization error: {receipt_processor.service_error}")
