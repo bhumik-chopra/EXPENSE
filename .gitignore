@@ -58,6 +58,9 @@ backend/backend-codex.out.log
 backend/backend-codex.err.log
 backend/backend-codex-live.out.log
 backend/backend-codex-live.err.log
+backend/backend-live.out.log
+backend/backend-live.err.log
+backend/backend-live.log
 *.pyc
 
 # Node / frontend
@@ -84,6 +87,8 @@ frontend/frontend-session.err.log
 frontend/frontend-codex.out.log
 frontend/frontend-codex.err.log
 frontend/frontend-live.log
+frontend/frontend-live.out.log
+frontend/frontend-live.err.log
 .eslintcache
 
 # Local databases and dumps
