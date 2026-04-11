@@ -546,6 +546,9 @@ class ReceiptProcessor:
         inferred_amount = self._infer_total_from_item_rows(clean_text)
         if inferred_amount > 0:
             amounts = sorted(set([*amounts, inferred_amount]), reverse=True)
+        amount_in_words = self._extract_amount_in_words(clean_text)
+        if amount_in_words > 0:
+            amounts = sorted(set([*amounts, amount_in_words]), reverse=True)
 
         def is_implausible_ocr_merge(value: float) -> bool:
             if value < 10000:
@@ -559,9 +562,38 @@ class ReceiptProcessor:
             has_misaligned_qty_price_pattern = bool(re.search(r"(?:\d{2,3})0$", compact) or re.search(r"(?:\d{3}){2,}", compact))
             return has_repeated_halves or has_misaligned_qty_price_pattern
 
+        def is_header_like_number(value: float) -> bool:
+            if not value or value < 10000 or not float(value).is_integer():
+                return False
+
+            variants = {str(int(value)), f"{value:.2f}"}
+            header_tokens = (
+                "new delhi",
+                "delhi",
+                "address",
+                "plot no",
+                "state code",
+                "phone",
+                "mobile",
+                "gst",
+                "gstin",
+                "invoice no",
+                "bill no",
+                "date & time",
+            )
+
+            for line in clean_text.splitlines():
+                lower = line.lower()
+                if any(token in lower for token in header_tokens) and any(token and token in line for token in variants):
+                    return True
+            return False
+
         def score_amount_candidate(value: float) -> int:
             if not value or value <= 0:
                 return -999
+
+            if is_header_like_number(value):
+                return -120
 
             variants = {
                 f"{value:.2f}",
@@ -575,7 +607,7 @@ class ReceiptProcessor:
 
                 if "net to pay" in lower:
                     score += 95
-                elif "pls pay" in lower or "please pay" in lower:
+                elif re.search(r"\b(?:pls|please)\s+[pfb]ay\b", lower):
                     score += 90
                 elif "grand total" in lower:
                     score += 80
@@ -592,7 +624,12 @@ class ReceiptProcessor:
                     score -= 20
             return score
 
-        if detected_amount > 0:
+        if default_amount and default_amount > 0 and is_header_like_number(float(default_amount)):
+            default_amount = 0.0
+
+        amounts = [value for value in amounts if not is_header_like_number(value)]
+
+        if detected_amount > 0 and not is_header_like_number(detected_amount):
             current_amount = float(default_amount) if default_amount and default_amount > 0 else 0.0
             detected_score = score_amount_candidate(detected_amount)
             current_score = score_amount_candidate(current_amount) if current_amount > 0 else -999
@@ -631,6 +668,19 @@ class ReceiptProcessor:
             or score_amount_candidate(inferred_amount) > score_amount_candidate(float(default_amount))
         ):
             default_amount = inferred_amount
+
+        current_default_score = score_amount_candidate(float(default_amount)) if default_amount and default_amount > 0 else -999
+        if amount_in_words > 0 and (
+            not default_amount
+            or default_amount <= 0
+            or current_default_score < 80
+            or is_header_like_number(float(default_amount))
+            or (
+                default_amount > 0
+                and abs(amount_in_words - float(default_amount)) <= max(2.0, float(default_amount) * 0.2)
+            )
+        ):
+            default_amount = amount_in_words
 
         unique_amounts = sorted(set(amounts), reverse=True)
         amount = round(float(default_amount), 2) if default_amount and default_amount > 0 else (
@@ -674,7 +724,7 @@ class ReceiptProcessor:
         collapsed = re.sub(r"\s+", " ", text).strip()
         if collapsed:
             explicit_match = re.search(
-                r"(?:pls\.?\s*pay|please\s*pay|net\s*to\s*pay|grand\s*total|amount\s*due|net\s*total|total\s*payable)[^0-9]{0,20}(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+                r"(?:pls\.?\s*[pfb]ay|please\s*[pfb]ay|net\s*to\s*pay|grand\s*total|amount\s*due|net\s*total|total\s*payable)[^0-9]{0,20}(\d+(?:,\d{3})*(?:\.\d{1,2})?)",
                 collapsed,
                 flags=re.IGNORECASE,
             )
@@ -710,8 +760,8 @@ class ReceiptProcessor:
         grand_total_values = find_labeled_values(
             (
                 r"net\s*to\s*pay",
-                r"pls\.?\s*pay",
-                r"please\s*pay",
+                r"pls\.?\s*[pfb]ay",
+                r"please\s*[pfb]ay",
                 r"grand\s*total",
                 r"amount\s*due",
                 r"net\s*total",
@@ -770,7 +820,7 @@ class ReceiptProcessor:
             if not values:
                 continue
 
-            if any(token in lower for token in ("grand total", "amount due", "net total", "invoice total", "payable", "pls pay", "please pay")):
+            if any(token in lower for token in ("grand total", "amount due", "net total", "invoice total", "payable")) or re.search(r"\b(?:pls|please)\s+[pfb]ay\b", lower):
                 grand_total_candidates.append(max(values))
                 continue
 
@@ -803,6 +853,86 @@ class ReceiptProcessor:
             if tax_total > 0 or round_off > 0:
                 return round(inferred_subtotal + tax_total + round_off, 2)
             return inferred_subtotal
+
+        return 0.0
+
+    def _extract_amount_in_words(self, text: str) -> float:
+        if not text:
+            return 0.0
+
+        units = {
+            "zero": 0,
+            "one": 1,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5,
+            "six": 6,
+            "seven": 7,
+            "eight": 8,
+            "nine": 9,
+            "ten": 10,
+            "eleven": 11,
+            "twelve": 12,
+            "thirteen": 13,
+            "fourteen": 14,
+            "fifteen": 15,
+            "sixteen": 16,
+            "seventeen": 17,
+            "eighteen": 18,
+            "nineteen": 19,
+            "twenty": 20,
+            "thirty": 30,
+            "forty": 40,
+            "fifty": 50,
+            "sixty": 60,
+            "seventy": 70,
+            "eighty": 80,
+            "ninety": 90,
+        }
+        scales = {"hundred": 100, "thousand": 1000, "lakh": 100000, "million": 1000000}
+
+        def words_to_number(raw_words: str) -> float:
+            words = re.findall(r"[a-z]+", raw_words.lower())
+            if not words:
+                return 0.0
+
+            total = 0
+            current = 0
+            seen_number_word = False
+            for word in words:
+                if word == "and":
+                    continue
+                if word in units:
+                    current += units[word]
+                    seen_number_word = True
+                    continue
+                if word == "hundred":
+                    current = max(current, 1) * 100
+                    seen_number_word = True
+                    continue
+                if word in ("thousand", "lakh", "million"):
+                    current = max(current, 1)
+                    total += current * scales[word]
+                    current = 0
+                    seen_number_word = True
+                    continue
+                return 0.0
+
+            if not seen_number_word:
+                return 0.0
+            return float(total + current)
+
+        patterns = [
+            r"(?:rs\.?|rupees?)\s*[:\-]?\s*([a-z\s-]+?)\s+only\b",
+            r"\b([a-z\s-]+?)\s+only\b",
+        ]
+
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                value = words_to_number(match.group(1))
+                if value > 0:
+                    return value
 
         return 0.0
 

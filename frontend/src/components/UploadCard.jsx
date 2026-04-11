@@ -58,7 +58,7 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
   const findAmountAfterLabel = (sourceText, labels) => {
     for (const label of labels) {
       const pattern = new RegExp(
-        `${label}[^\\d]{0,24}(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?)`,
+        `${label}[^\\d]{0,24}(\\d+(?:,\\d{3})*(?:\\.\\d{1,2})?)`,
         "i"
       );
       const match = sourceText.match(pattern);
@@ -73,6 +73,8 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
   };
 
   const prioritizedLabeledAmount = findAmountAfterLabel(normalizedText, [
+    "pls\\.?\\s+pay",
+    "please\\s+pay",
     "net\\s+to\\s+pay",
     "grand\\s+total",
     "amount\\s+due",
@@ -82,9 +84,6 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
   ]);
 
   if (prioritizedLabeledAmount > 0) {
-    if (Number.isFinite(numericFallback) && numericFallback > 0) {
-      return Math.max(prioritizedLabeledAmount, numericFallback);
-    }
     return prioritizedLabeledAmount;
   }
 
@@ -98,7 +97,7 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
     const values = parseAmounts(line);
     if (!values.length) continue;
 
-    if (/net\s+to\s+pay|grand\s+total|amount\s+due|invoice\s+total|net\s+total/i.test(lower)) {
+    if (/pls\.?\s+pay|please\s+pay|net\s+to\s+pay|grand\s+total|amount\s+due|invoice\s+total|net\s+total/i.test(lower)) {
       return values[values.length - 1];
     }
 

@@ -26,6 +26,7 @@ credentials.*
 
 # Python
 __pycache__/
+backend/__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
@@ -44,6 +45,8 @@ backend/.venv311/
 venv/
 env/
 ENV/
+*.pid
+*.seed
 backend/backend-out.log
 backend/backend-err.log
 backend/backend-run.log
@@ -80,6 +83,8 @@ frontend/frontend-session.out.log
 frontend/frontend-session.err.log
 frontend/frontend-codex.out.log
 frontend/frontend-codex.err.log
+frontend/frontend-live.log
+.eslintcache
 
 # Local databases and dumps
 *.db
