@@ -10,10 +10,10 @@ import Settings from "./components/Settings";
 import LoginPage from "./components/LoginPage";
 import Bhavishyvani from "./components/Bhavishyvani";
 import { ThemeContext } from "./components/ThemeContext";
-import { clearCurrentUser, persistCurrentUser } from "./utils/api";
+import { clearCurrentUser, configureAuthTokenGetter, persistCurrentUser } from "./utils/api";
 
 export default function App() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
   const [page, setPage] = useState("Dashboard");
@@ -81,6 +81,15 @@ export default function App() {
 
     clearCurrentUser();
   }, [user]);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      configureAuthTokenGetter(() => getToken());
+      return;
+    }
+
+    configureAuthTokenGetter(null);
+  }, [getToken, isSignedIn]);
 
   let content;
   if (page === "Dashboard") content = <Dashboard />;

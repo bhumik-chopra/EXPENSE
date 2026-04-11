@@ -2,6 +2,7 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const USER_STORAGE_KEY = "expense-tracker-user";
+let authTokenGetter = null;
 
 function getStoredUser() {
   if (typeof window === "undefined") {
@@ -52,8 +53,17 @@ export function clearCurrentUser() {
   window.localStorage.removeItem(USER_STORAGE_KEY);
 }
 
+export function configureAuthTokenGetter(getter) {
+  authTokenGetter = typeof getter === "function" ? getter : null;
+}
+
 export async function apiFetch(path, options = {}) {
   const headers = { ...getUserHeaders(), ...(options.headers || {}) };
+  const token = authTokenGetter ? await authTokenGetter() : "";
+
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";

@@ -401,11 +401,97 @@ class ReceiptProcessor:
             source=source,
             default_category=result.get("category"),
             default_amount=result.get("amount"),
+            default_date=result.get("date"),
             ocr_backend=result.get("ocr_backend"),
             all_amounts=result.get("all_amounts", []),
         )
         parsed["confidence"] = 0.82 if raw_text else 0.35
         return parsed
+
+    @staticmethod
+    def _parse_amount_value(raw: str) -> float:
+        try:
+            return round(float(str(raw).replace(",", "")), 2)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _normalize_spaced_amounts(text: str) -> str:
+        normalized = str(text or "")
+        normalized = re.sub(r"(?<=\d)\s*\.\s*(?=\d)", ".", normalized)
+        return normalized
+
+    @staticmethod
+    def _is_valid_date_string(value: str | None) -> bool:
+        if not value:
+            return False
+        try:
+            datetime.strptime(str(value), "%Y-%m-%d")
+            return True
+        except (TypeError, ValueError):
+            return False
+
+    def _extract_line_amounts(self, line: str) -> list[float]:
+        if not line:
+            return []
+
+        lower = line.lower()
+        if any(
+            token in lower
+            for token in (
+                "gst no",
+                "gstin",
+                "phone",
+                "mobile",
+                "invoice no",
+                "bill no",
+                "token no",
+                "order id",
+                "state code",
+                "merchant id",
+                "approval code",
+                "transaction id",
+                "ref #",
+                "ref#",
+                "act #",
+                "point opening",
+                "point collected",
+                "point redeem",
+                "point balance",
+                "card no",
+                "incard no",
+                "receipt status",
+            )
+        ):
+            return []
+
+        values = []
+        for match in re.finditer(r"\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?", line):
+            token = match.group(0)
+            start = match.start()
+            end = match.end()
+            context = line[max(0, start - 6) : min(len(line), end + 6)].lower()
+            before = line[start - 1] if start > 0 else ""
+            after = line[end] if end < len(line) else ""
+
+            if "/" in context or "-" in context or ":" in context:
+                continue
+            if before.isdigit() or after.isdigit():
+                continue
+            if re.fullmatch(r"\d{4}", token):
+                continue
+            if len(token) >= 6 and "." not in token:
+                continue
+            if "total item qty" in lower or "item qty" in lower:
+                continue
+            if before.isalpha() or after.isalpha():
+                continue
+
+            value = self._parse_amount_value(token)
+            if value > 0:
+                values.append(value)
+
+        return values
 
     def _build_text_payload(
         self,
@@ -413,10 +499,11 @@ class ReceiptProcessor:
         source: str,
         default_category: str | None = None,
         default_amount: float | None = None,
+        default_date: str | None = None,
         ocr_backend: str | None = None,
         all_amounts: list[float] | None = None,
     ):
-        clean_text = (extracted_text or "").strip()
+        clean_text = self._normalize_spaced_amounts(extracted_text).strip()
         if not clean_text:
             return self._manual_entry_payload(
                 message="No readable text was found in the uploaded receipt.",
@@ -466,6 +553,8 @@ class ReceiptProcessor:
 
                 if "net to pay" in lower:
                     score += 95
+                elif "pls pay" in lower or "please pay" in lower:
+                    score += 90
                 elif "grand total" in lower:
                     score += 80
                 elif "net total" in lower or "invoice total" in lower or "amount due" in lower:
@@ -473,7 +562,7 @@ class ReceiptProcessor:
                 elif re.search(r"\btotal\b", lower):
                     score += 50
 
-                if any(token in lower for token in ("cgst", "sgst", "igst", "vat", "tax", "round off")):
+                if any(token in lower for token in ("cgst", "sgst", "igst", "vat", "tax", "round off", "item qty")):
                     score -= 40
 
                 number_count = len(re.findall(r"\d+(?:[.,]\d+)?", line))
@@ -502,8 +591,11 @@ class ReceiptProcessor:
         if labeled_total > 0 and (
             not default_amount
             or default_amount <= 0
-            or labeled_total > float(default_amount)
             or score_amount_candidate(labeled_total) > score_amount_candidate(float(default_amount))
+            or (
+                score_amount_candidate(labeled_total) == score_amount_candidate(float(default_amount))
+                and labeled_total <= float(default_amount) * 1.25
+            )
         ):
             default_amount = labeled_total
 
@@ -524,7 +616,7 @@ class ReceiptProcessor:
         )
         category = self._normalize_category(default_category or self._predict_category(clean_text))
         vendor = self._extract_vendor(clean_text)
-        date_value = self._extract_date(clean_text)
+        date_value = default_date if self._is_valid_date_string(default_date) else self._extract_date(clean_text)
         currency = self._detect_currency(clean_text)
         items = self._extract_items(clean_text)
 
@@ -558,35 +650,57 @@ class ReceiptProcessor:
 
     def _extract_labeled_total(self, text: str) -> float:
         collapsed = re.sub(r"\s+", " ", text).strip()
-        if not collapsed:
+        if collapsed:
+            explicit_match = re.search(
+                r"(?:pls\.?\s*pay|please\s*pay|net\s*to\s*pay|grand\s*total|amount\s*due|net\s*total|total\s*payable)[^0-9]{0,20}(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+                collapsed,
+                flags=re.IGNORECASE,
+            )
+            if explicit_match:
+                explicit_value = self._parse_amount_value(explicit_match.group(1))
+                if explicit_value > 0:
+                    return explicit_value
+
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
             return 0.0
 
-        amount_pattern = r"(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)"
-
-        def parse_amount(raw: str) -> float:
-            try:
-                return round(float(raw.replace(",", "")), 2)
-            except ValueError:
-                return 0.0
-
-        def find_after_labels(labels: tuple[str, ...], window: int = 48) -> list[float]:
+        def find_labeled_values(labels: tuple[str, ...]) -> list[float]:
             values = []
-            for label in labels:
-                pattern = re.compile(rf"{label}[^0-9]{{0,{window}}}{amount_pattern}", flags=re.IGNORECASE)
-                for match in pattern.finditer(collapsed):
-                    value = parse_amount(match.group(1))
-                    if value > 0:
-                        values.append(value)
+            for line in lines:
+                lower = line.lower()
+                if any(
+                    token in lower
+                    for token in (
+                        "total item qty",
+                        "qty.",
+                        "gst",
+                        "phone",
+                        "state code",
+                        "plot no",
+                    )
+                ):
+                    continue
+                if any(re.search(label, line, flags=re.IGNORECASE) for label in labels):
+                    values.extend(self._extract_line_amounts(line))
             return values
 
-        grand_total_values = find_after_labels(
-            ("net\\s*to\\s*pay", "grand\\s*total", "amount\\s*due", "net\\s*total", "total\\s*payable")
+        grand_total_values = find_labeled_values(
+            (
+                r"net\s*to\s*pay",
+                r"pls\.?\s*pay",
+                r"please\s*pay",
+                r"grand\s*total",
+                r"amount\s*due",
+                r"net\s*total",
+                r"total\s*payable",
+            )
         )
         if grand_total_values:
             return max(grand_total_values)
 
-        total_values = find_after_labels(("invoice\\s*total", "(?<!grand\\s)total"))
-        gst_values = find_after_labels(("gst", "cgst", "sgst", "igst", "vat", "tax"), window=24)
+        total_values = find_labeled_values((r"invoice\s*total", r"(?<!grand\s)\btotal\b"))
+        gst_values = find_labeled_values((r"\bcgst\b", r"\bsgst\b", r"\bigst\b", r"\bvat\b", r"\btax\b"))
 
         if total_values and gst_values:
             highest_total = max(total_values)
@@ -611,21 +725,34 @@ class ReceiptProcessor:
         subtotal_candidates = []
         grand_total_candidates = []
 
-        amount_pattern = re.compile(r"\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?")
         for line in lines:
             lower = line.lower()
-            values = []
-            for token in amount_pattern.findall(line):
-                try:
-                    values.append(round(float(token.replace(",", "")), 2))
-                except ValueError:
-                    continue
+            if any(
+                token in lower
+                for token in (
+                    "gst no",
+                    "gstin",
+                    "phone",
+                    "mobile",
+                    "state code",
+                    "plot no",
+                    "date & time",
+                    "invoice no",
+                    "bill no",
+                )
+            ):
+                continue
+
+            values = self._extract_line_amounts(line)
 
             if not values:
                 continue
 
-            if "grand total" in lower:
+            if any(token in lower for token in ("grand total", "amount due", "net total", "invoice total", "payable", "pls pay", "please pay")):
                 grand_total_candidates.append(max(values))
+                continue
+
+            if "total item qty" in lower or "item qty" in lower:
                 continue
 
             if re.search(r"\btotal\b", lower) and "subtotal" not in lower and "grand total" not in lower:
@@ -638,10 +765,6 @@ class ReceiptProcessor:
 
             if "round off" in lower:
                 round_off += max(values)
-                continue
-
-            if any(token in lower for token in ("amount due", "net total", "invoice total", "payable")):
-                grand_total_candidates.append(max(values))
                 continue
 
             if len(values) >= 2 and re.search(r"[a-zA-Z]", line):
@@ -751,6 +874,32 @@ class ReceiptProcessor:
             "payment receipt",
         }
 
+        slogan_header_match = re.match(r"\s*([A-Z][A-Za-z&.'*-]{2,40})\s+Save money", text, flags=re.IGNORECASE)
+        if slogan_header_match:
+            return slogan_header_match.group(1).strip()[:80]
+
+        if "store" in text.lower():
+            leading_tokens = re.findall(r"\b[A-Z][A-Z&.'*-]{2,}\b", text[:120])
+            for token in leading_tokens:
+                if token.lower() not in {"invoice", "receipt", "tax", "plot", "state", "phone", "name", "date", "cash"}:
+                    return f"{token} STORE"[:80]
+
+        if len(lines) <= 2:
+            header_match = re.search(
+                r"\b(?:receipt|invoice|tax invoice)\b\s+([A-Z][A-Za-z&.' -]{2,60}?(?:clinic|store|mart|medical|pharmacy|hospital|restaurant|cafe|veterinary clinic))\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if header_match:
+                return re.sub(r"\s+", " ", header_match.group(1)).strip()[:80]
+
+        uppercase_header_match = re.search(
+            r"\b([A-Z][A-Z&.' -]{3,60}?(?:PHARMACY|CLINIC|STORE|MART|MEDICAL|HOSPITAL|CAFE|RESTAURANT))\b",
+            text,
+        )
+        if uppercase_header_match:
+            return re.sub(r"\s+", " ", uppercase_header_match.group(1)).strip()[:80]
+
         def looks_like_item_row(value: str) -> bool:
             compact = re.sub(r"\s+", " ", value).strip()
             if not compact:
@@ -783,6 +932,8 @@ class ReceiptProcessor:
 
     def _extract_date(self, text: str) -> str:
         current_year = datetime.now().year
+        text = re.sub(r"\b(20\d)[sS]\b", lambda m: f"{m.group(1)}{str(current_year)[-1]}", text)
+        text = re.sub(r"\b(20\d)[oO]\b", r"\g<1>0", text)
 
         def normalize_year(raw_year: str) -> int | None:
             try:
@@ -834,10 +985,21 @@ class ReceiptProcessor:
             (
                 r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})(?=\d{1,2}:\d{2}(?:\s*[APMapm]{2})?)",
                 lambda m: (
-                    lambda parts: build_date(parts[0], parts[1], parts[2])
+                    lambda parts: build_date(
+                        parts[1] if parts[1].isdigit() and int(parts[1]) > 12 and parts[0].isdigit() and int(parts[0]) <= 12 else parts[0],
+                        parts[0] if parts[1].isdigit() and int(parts[1]) > 12 and parts[0].isdigit() and int(parts[0]) <= 12 else parts[1],
+                        parts[2],
+                    )
                 )(re.split(r"[/-]", m.group(1))),
             ),
-            (r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
+            (
+                r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b",
+                lambda m: build_date(
+                    m.group(2) if m.group(2).isdigit() and int(m.group(2)) > 12 and m.group(1).isdigit() and int(m.group(1)) <= 12 else m.group(1),
+                    m.group(1) if m.group(2).isdigit() and int(m.group(2)) > 12 and m.group(1).isdigit() and int(m.group(1)) <= 12 else m.group(2),
+                    m.group(3),
+                ),
+            ),
             (r"\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
             (r"\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{2,4})\b", lambda m: build_date(m.group(2), m.group(1), m.group(3))),
             (r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})\b", lambda m: build_date(m.group(1), m.group(2), m.group(3))),
