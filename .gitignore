@@ -61,6 +61,8 @@ backend/backend-codex-live.err.log
 backend/backend-live.out.log
 backend/backend-live.err.log
 backend/backend-live.log
+backend/*session*.log
+backend/*live*.log
 *.pyc
 
 # Node / frontend
@@ -89,6 +91,8 @@ frontend/frontend-codex.err.log
 frontend/frontend-live.log
 frontend/frontend-live.out.log
 frontend/frontend-live.err.log
+frontend/*session*.log
+frontend/*live*.log
 .eslintcache
 
 # Local databases and dumps
@@ -110,3 +114,5 @@ Thumbs.db
 # Local artifacts
 *.zip
 *.log
+commands.txt
+commands*.txt

@@ -55,6 +55,24 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
       .map((match) => Number(match[0].replace(/,/g, "")))
       .filter((value) => Number.isFinite(value) && value > 0);
 
+  const isHeaderLikeNumber = (value) => {
+    if (!Number.isFinite(value) || value < 10000 || !Number.isInteger(value)) {
+      return false;
+    }
+
+    const variants = [String(value), `${value.toFixed(2)}`];
+    return lines.some((line) => {
+      const lower = line.toLowerCase();
+      return (
+        /new delhi|delhi|address|plot no|state code|phone|mobile|gst|gstin|invoice no|bill no|date & time/i.test(lower) &&
+        variants.some((variant) => line.includes(variant))
+      );
+    });
+  };
+
+  const strongPayLabelPattern =
+    /pls\.?\s+(?:p(?:a|f|b)y|fay|bay)|please\s+(?:p(?:a|f|b)y|fay|bay)|net\s+to\s+pay|grand\s+total|amount\s+due|total\s+payable|invoice\s+total|net\s+total/i;
+
   const findAmountAfterLabel = (sourceText, labels) => {
     for (const label of labels) {
       const pattern = new RegExp(
@@ -64,7 +82,7 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
       const match = sourceText.match(pattern);
       if (match) {
         const value = Number(match[1].replace(/,/g, ""));
-        if (Number.isFinite(value) && value > 0) {
+        if (Number.isFinite(value) && value > 0 && !isHeaderLikeNumber(value)) {
           return value;
         }
       }
@@ -73,8 +91,8 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
   };
 
   const prioritizedLabeledAmount = findAmountAfterLabel(normalizedText, [
-    "pls\\.?\\s+pay",
-    "please\\s+pay",
+    "pls\\.?\\s+(?:p(?:a|f|b)y|fay|bay)",
+    "please\\s+(?:p(?:a|f|b)y|fay|bay)",
     "net\\s+to\\s+pay",
     "grand\\s+total",
     "amount\\s+due",
@@ -97,13 +115,13 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
     const values = parseAmounts(line);
     if (!values.length) continue;
 
-    if (/pls\.?\s+pay|please\s+pay|net\s+to\s+pay|grand\s+total|amount\s+due|invoice\s+total|net\s+total/i.test(lower)) {
+    if (strongPayLabelPattern.test(lower)) {
       return values[values.length - 1];
     }
 
     if (/\btotal\b/.test(lower) && !/subtotal|grand total|net to pay/i.test(lower)) {
       const candidate = values[values.length - 1];
-      if (!Number.isFinite(numericFallback) || candidate >= numericFallback) {
+      if (!isHeaderLikeNumber(candidate) && (!Number.isFinite(numericFallback) || candidate >= numericFallback)) {
         return candidate;
       }
     }
@@ -129,7 +147,11 @@ const inferAmountFromExtractedText = (text, fallbackAmount) => {
     return Number(rowTotal.toFixed(2));
   }
 
-  return Number.isFinite(numericFallback) ? numericFallback : 0;
+  if (Number.isFinite(numericFallback) && !isHeaderLikeNumber(numericFallback)) {
+    return numericFallback;
+  }
+
+  return 0;
 };
 
 export default function UploadCard() {

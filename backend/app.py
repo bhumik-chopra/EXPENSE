@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -13,6 +14,7 @@ from pathlib import Path
 import fitz
 import pdfplumber
 import PyPDF2
+import requests
 from dateutil import parser as date_parser
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -117,6 +119,12 @@ CORS(
 USD_TO_INR_RATE = 80.0
 MONGODB_URI = os.environ.get("MONGODB_URI", "").strip()
 MONGODB_DB_NAME = os.environ.get("MONGODB_DB_NAME", "EXPENSE").strip() or "EXPENSE"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "").strip().lower()
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "").strip()
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant").strip() or "llama-3.1-8b-instant"
+XAI_MODEL = os.environ.get("XAI_MODEL", "grok-4.20-reasoning").strip() or "grok-4.20-reasoning"
 
 
 def normalize_currency(value) -> str:
@@ -127,6 +135,244 @@ def normalize_currency(value) -> str:
 def amount_to_inr(amount, currency) -> float:
     normalized_currency = normalize_currency(currency)
     return float(amount) * (USD_TO_INR_RATE if normalized_currency == "USD" else 1.0)
+
+
+def get_ai_client_config() -> dict:
+    key = OPENAI_API_KEY
+    provider = AI_PROVIDER
+    base_url = AI_BASE_URL
+    model = OPENAI_MODEL
+
+    if not provider:
+        if key.startswith("gsk_"):
+            provider = "groq"
+        elif key.startswith("xai-"):
+            provider = "xai"
+        else:
+            provider = "openai"
+
+    if not base_url:
+        if provider == "groq":
+            base_url = "https://api.groq.com/openai/v1"
+            model = GROQ_MODEL
+        elif provider == "xai":
+            base_url = "https://api.x.ai/v1"
+            model = XAI_MODEL
+        else:
+            base_url = "https://api.openai.com/v1"
+            model = OPENAI_MODEL
+
+    return {
+        "provider": provider,
+        "api_key": key,
+        "base_url": base_url.rstrip("/"),
+        "model": model,
+    }
+
+
+def build_user_chat_context(user: dict | None) -> tuple[str | None, dict]:
+    if not user or not user.get("id"):
+        return None, {"enabled": False, "reason": "missing_user_headers"}
+
+    if not expense_store.ensure_ready():
+        return None, {"enabled": False, "reason": "expense_store_unavailable"}
+
+    expenses = expense_store.list_expenses(user["id"])
+    monthly_budget = expense_store.get_user_budget(user)
+
+    category_totals = defaultdict(float)
+    current_month = datetime.now().strftime("%Y-%m")
+    current_month_spend = 0.0
+
+    for expense in expenses:
+        amount_inr = amount_to_inr(expense.get("amount", 0), expense.get("currency"))
+        category_totals[str(expense.get("category") or "Other")] += amount_inr
+        if str(expense.get("date") or "").startswith(current_month):
+            current_month_spend += amount_inr
+
+    top_categories = sorted(category_totals.items(), key=lambda item: item[1], reverse=True)[:3]
+    recent_expenses = sorted(
+        expenses,
+        key=lambda item: (str(item.get("date") or ""), str(item.get("createdAt") or "")),
+        reverse=True,
+    )[:5]
+
+    context_payload = {
+        "user_name": user.get("name") or "User",
+        "expense_count": len(expenses),
+        "monthly_budget_inr": round(monthly_budget, 2),
+        "current_month_spend_inr": round(current_month_spend, 2),
+        "top_categories": [
+            {"category": category, "amount_inr": round(amount, 2)}
+            for category, amount in top_categories
+        ],
+        "recent_expenses": [
+            {
+                "vendor": str(item.get("vendor") or "Unknown"),
+                "category": str(item.get("category") or "Other"),
+                "amount_inr": round(amount_to_inr(item.get("amount", 0), item.get("currency")), 2),
+                "date": str(item.get("date") or ""),
+            }
+            for item in recent_expenses
+        ],
+    }
+
+    context_message = (
+        "Current signed-in user expense summary:\n"
+        + json.dumps(context_payload, ensure_ascii=True)
+        + "\nUse it only when the user asks about their own spending, budget, recent expenses, or categories."
+    )
+
+    return context_message, {
+        "enabled": True,
+        "expense_count": context_payload["expense_count"],
+        "current_month_spend_inr": context_payload["current_month_spend_inr"],
+        "monthly_budget_inr": context_payload["monthly_budget_inr"],
+    }
+
+
+def extract_openai_text(response_payload: dict) -> str:
+    output_text = str(response_payload.get("output_text") or "").strip()
+    if output_text:
+        return output_text
+
+    fragments = []
+    for item in response_payload.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for content in item.get("content", []):
+            if content.get("type") == "output_text" and content.get("text"):
+                fragments.append(str(content["text"]))
+            elif content.get("type") == "refusal" and content.get("refusal"):
+                fragments.append(str(content["refusal"]))
+
+    return "\n".join(fragment for fragment in fragments if fragment).strip()
+
+
+def extract_chat_completion_text(response_payload: dict) -> str:
+    choices = response_payload.get("choices") or []
+    if not choices:
+        return ""
+
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        fragments = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text" and item.get("text"):
+                fragments.append(str(item["text"]))
+        return "\n".join(fragment for fragment in fragments if fragment).strip()
+
+    return ""
+
+
+def build_local_chat_reply(user_query: str) -> str:
+    trimmed_query = str(user_query or "").strip()
+    if not trimmed_query:
+        return "Ask me anything and I will try to help."
+
+    return (
+        "I could not reach the Groq API right now, but I received your message: "
+        f"\"{trimmed_query}\". Please try again in a moment."
+    )
+
+
+def generate_muneem_reply(messages: list[dict], user_context_message: str | None = None) -> str:
+    client_config = get_ai_client_config()
+
+    if not client_config["api_key"]:
+        raise RuntimeError("Muneem is not configured yet. Add OPENAI_API_KEY in backend/.env.")
+
+    sanitized_messages = []
+    for message in messages[-12:]:
+        role = str(message.get("role") or "").strip().lower()
+        content = str(message.get("content") or "").strip()
+        if role not in {"user", "assistant"} or not content:
+            continue
+        sanitized_messages.append({"role": role, "content": content[:3000]})
+
+    if not sanitized_messages or sanitized_messages[-1]["role"] != "user":
+        raise ValueError("A user message is required.")
+    latest_user_query = sanitized_messages[-1]["content"]
+
+    system_prompt = (
+        "You are GrokChat inside SmartSpend. "
+        "Answer the user's message simply, directly, and conversationally. "
+        "Do not claim access to private account data, expenses, budgets, or uploaded receipts unless the user explicitly pasted that information into the chat. "
+        "Keep replies useful and fairly short."
+    )
+
+    use_chat_completions = client_config["provider"] == "groq"
+    if use_chat_completions:
+        prompt_messages = [{"role": "system", "content": system_prompt}]
+        if user_context_message:
+            prompt_messages.append({"role": "system", "content": user_context_message})
+        prompt_messages.extend(sanitized_messages)
+
+        payload = {
+            "model": client_config["model"],
+            "messages": prompt_messages,
+            "temperature": 0.4,
+            "max_completion_tokens": 400,
+        }
+        endpoint = f"{client_config['base_url']}/chat/completions"
+    else:
+        response_input = [
+            {
+                "role": "system",
+                "content": system_prompt,
+            }
+        ]
+        if user_context_message:
+            response_input.append(
+                {
+                    "role": "system",
+                    "content": [{"type": "input_text", "text": user_context_message}],
+                }
+            )
+        response_input.extend(
+            [
+                {
+                    "role": message["role"],
+                    "content": [{"type": "input_text", "text": message["content"]}],
+                }
+                for message in sanitized_messages
+            ]
+        )
+
+        payload = {
+            "model": client_config["model"],
+            "input": response_input,
+            "text": {"verbosity": "low"},
+        }
+        endpoint = f"{client_config['base_url']}/responses"
+
+    try:
+        response = requests.post(
+            endpoint,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {client_config['api_key']}",
+            },
+            json=payload,
+            timeout=45,
+        )
+        response.raise_for_status()
+        response_payload = response.json()
+    except requests.RequestException:
+        return build_local_chat_reply(latest_user_query)
+
+    reply = (
+        extract_chat_completion_text(response_payload)
+        if use_chat_completions
+        else extract_openai_text(response_payload)
+    )
+    if not reply:
+        return build_local_chat_reply(latest_user_query)
+    return reply
 
 
 class MongoExpenseStore:
@@ -444,6 +690,22 @@ class ReceiptProcessor:
         return normalized
 
     @staticmethod
+    def _is_strong_pay_label(text: str) -> bool:
+        return bool(
+            re.search(
+                r"\b(?:pls|please)\.?\s+(?:p(?:a|f|b)y|fay|bay)\b|"
+                r"\bnet\s*to\s*pay\b|"
+                r"\bgrand\s*total\b|"
+                r"\bamount\s*due\b|"
+                r"\btotal\s*payable\b|"
+                r"\binvoice\s*total\b|"
+                r"\bnet\s*total\b",
+                text or "",
+                flags=re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
     def _is_valid_date_string(value: str | None) -> bool:
         if not value:
             return False
@@ -607,7 +869,7 @@ class ReceiptProcessor:
 
                 if "net to pay" in lower:
                     score += 95
-                elif re.search(r"\b(?:pls|please)\s+[pfb]ay\b", lower):
+                elif self._is_strong_pay_label(lower):
                     score += 90
                 elif "grand total" in lower:
                     score += 80
@@ -724,7 +986,7 @@ class ReceiptProcessor:
         collapsed = re.sub(r"\s+", " ", text).strip()
         if collapsed:
             explicit_match = re.search(
-                r"(?:pls\.?\s*[pfb]ay|please\s*[pfb]ay|net\s*to\s*pay|grand\s*total|amount\s*due|net\s*total|total\s*payable)[^0-9]{0,20}(\d+(?:,\d{3})*(?:\.\d{1,2})?)",
+                r"(?:pls\.?\s+(?:p(?:a|f|b)y|fay|bay)|please\s+(?:p(?:a|f|b)y|fay|bay)|net\s*to\s*pay|grand\s*total|amount\s*due|net\s*total|total\s*payable|invoice\s*total)[^0-9]{0,24}(\d+(?:,\d{3})*(?:\.\d{1,2})?)",
                 collapsed,
                 flags=re.IGNORECASE,
             )
@@ -760,12 +1022,13 @@ class ReceiptProcessor:
         grand_total_values = find_labeled_values(
             (
                 r"net\s*to\s*pay",
-                r"pls\.?\s*[pfb]ay",
-                r"please\s*[pfb]ay",
+                r"pls\.?\s+(?:p(?:a|f|b)y|fay|bay)",
+                r"please\s+(?:p(?:a|f|b)y|fay|bay)",
                 r"grand\s*total",
                 r"amount\s*due",
                 r"net\s*total",
                 r"total\s*payable",
+                r"invoice\s*total",
             )
         )
         if grand_total_values:
@@ -820,7 +1083,7 @@ class ReceiptProcessor:
             if not values:
                 continue
 
-            if any(token in lower for token in ("grand total", "amount due", "net total", "invoice total", "payable")) or re.search(r"\b(?:pls|please)\s+[pfb]ay\b", lower):
+            if any(token in lower for token in ("grand total", "amount due", "net total", "invoice total", "payable")) or self._is_strong_pay_label(lower):
                 grand_total_candidates.append(max(values))
                 continue
 
@@ -1710,6 +1973,33 @@ def predictions():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/muneem/chat", methods=["POST"])
+def muneem_chat():
+    try:
+        data = request.get_json(silent=True) or {}
+        messages = data.get("messages") or []
+        if not isinstance(messages, list):
+            return jsonify({"error": "Messages must be an array."}), 400
+
+        user = None
+        context_meta = {"enabled": False, "reason": "missing_user_headers"}
+        if request.headers.get("X-User-Id"):
+            user = {
+                "id": str(request.headers.get("X-User-Id", "")).strip(),
+                "email": str(request.headers.get("X-User-Email", "")).strip().lower(),
+                "name": str(request.headers.get("X-User-Name", "")).strip(),
+            }
+
+        user_context_message, context_meta = build_user_chat_context(user)
+        reply = generate_muneem_reply(messages, user_context_message=user_context_message)
+
+        return jsonify({"success": True, "reply": reply, "context": context_meta})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/expenses/clear", methods=["DELETE"])
 def clear_expenses():
     try:
@@ -1730,6 +2020,7 @@ def clear_expenses():
 @app.route("/api/health", methods=["GET"])
 def health_check():
     expense_store.ensure_ready()
+    ai_config = get_ai_client_config()
     return jsonify(
         {
             "status": "healthy",
@@ -1739,6 +2030,9 @@ def health_check():
             "ocr_backend": getattr(receipt_processor.ocr_service, "ocr_backend", None),
             "mongo_ready": expense_store.is_ready,
             "mongo_error": expense_store.error,
+            "muneem_ready": bool(ai_config["api_key"]),
+            "muneem_provider": ai_config["provider"],
+            "muneem_model": ai_config["model"],
             "expenses_count": expense_store.count_expenses(),
         }
     )

@@ -17,45 +17,50 @@ C:\codes\EXPENSE\backend\.venv311\Lib\site-packages\paddle\utils\cpp_extension\e
 [32mCreating model: ('PP-OCRv4_mobile_det', None)[0m
 [32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\BHUMIK\.paddlex\official_models\PP-OCRv4_mobile_det`.[0m
 WARNING: Logging before InitGoogleLogging() is written to STDERR
-I0408 10:50:52.154577 20360 onednn_context.cc:81] oneDNN v3.6.2
+I0411 16:42:59.702397 28288 onednn_context.cc:81] oneDNN v3.6.2
 [32mCreating model: ('en_PP-OCRv4_mobile_rec', None)[0m
 [32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\BHUMIK\.paddlex\official_models\en_PP-OCRv4_mobile_rec`.[0m
-[2026-04-08 10:50:52,986] [ WARNING] easyocr.py:71 - Using CPU. Note: This module is much faster with a GPU.
-[2026-04-08 10:50:58,863] [    INFO] _internal.py:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+[2026-04-11 16:43:00,221] [ WARNING] easyocr.py:71 - Using CPU. Note: This module is much faster with a GPU.
+[2026-04-11 16:43:02,619] [    INFO] _internal.py:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:5000
- * Running on http://10.248.31.61:5000
-[2026-04-08 10:50:58,864] [    INFO] _internal.py:97 - [33mPress CTRL+C to quit[0m
-[2026-04-08 10:51:04,322] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:04,326] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/analytics HTTP/1.1" 200 -
-[2026-04-08 10:51:04,332] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:04,341] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/analytics HTTP/1.1" 200 -
-[2026-04-08 10:51:04,354] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:04,360] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:04,647] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:04,768] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:04] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:05,010] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:05,207] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:05,376] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/analytics HTTP/1.1" 200 -
-[2026-04-08 10:51:05,423] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:05,624] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/analytics HTTP/1.1" 200 -
-[2026-04-08 10:51:05,812] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:08,811] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:08] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:09,253] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:09] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:09,682] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:09] "GET /api/health HTTP/1.1" 200 -
-[2026-04-08 10:51:34,324] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:34] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:51:34,775] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:51:34] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:52:04,020] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:52:04,134] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:04] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:52:35,226] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:35] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:52:35,669] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:52:35] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:53:04,913] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:53:05,025] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:53:35,224] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:35] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:53:35,676] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:53:35] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:54:04,929] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:04] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:54:05,051] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:05] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:54:45,232] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:45] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:54:45,688] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:54:45] "GET /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:55:44,917] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:55:44] "OPTIONS /api/expenses HTTP/1.1" 200 -
-[2026-04-08 10:55:45,103] [    INFO] _internal.py:97 - 127.0.0.1 - - [08/Apr/2026 10:55:45] "GET /api/expenses HTTP/1.1" 200 -
+ * Running on http://192.168.1.7:5000
+[2026-04-11 16:43:02,620] [    INFO] _internal.py:97 - [33mPress CTRL+C to quit[0m
+[2026-04-11 16:43:08,296] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:43:08] "GET /api/health HTTP/1.1" 200 -
+[2026-04-11 16:44:01,939] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:01] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:44:01,967] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:01] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:44:02,143] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:02] "GET /api/budget HTTP/1.1" 200 -
+[2026-04-11 16:44:02,204] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:02] "GET /api/predictions HTTP/1.1" 200 -
+[2026-04-11 16:44:06,155] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:06] "[31m[1mPOST /api/process-bill HTTP/1.1[0m" 400 -
+[2026-04-11 16:44:11,049] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:11] "[31m[1mPOST /api/process-bill HTTP/1.1[0m" 400 -
+[2026-04-11 16:44:39,031] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:39] "[31m[1mPOST /api/process-bill HTTP/1.1[0m" 400 -
+[2026-04-11 16:44:59,312] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:59] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:44:59,312] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:59] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:44:59,345] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:59] "GET /api/budget HTTP/1.1" 200 -
+[2026-04-11 16:44:59,575] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:44:59] "GET /api/predictions HTTP/1.1" 200 -
+[2026-04-11 16:45:05,844] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:45:05] "[31m[1mPOST /api/process-bill HTTP/1.1[0m" 400 -
+[2026-04-11 16:46:31,591] [    INFO] _internal.py:97 - 192.168.1.6 - - [11/Apr/2026 16:46:31] "[31m[1mPOST /api/process-bill HTTP/1.1[0m" 400 -
+[2026-04-11 16:49:06,194] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:06] "[33mGET / HTTP/1.1[0m" 404 -
+[2026-04-11 16:49:21,683] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:21,685] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:21,686] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:49:21,688] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:21,692] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:21,697] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:49:21,996] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/health HTTP/1.1" 200 -
+[2026-04-11 16:49:21,997] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/budget HTTP/1.1" 200 -
+[2026-04-11 16:49:21,998] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:21] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:22,003] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "OPTIONS /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:22,029] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:22,045] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:49:22,290] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/health HTTP/1.1" 200 -
+[2026-04-11 16:49:22,392] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:22,394] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/analytics HTTP/1.1" 200 -
+[2026-04-11 16:49:22,395] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/budget HTTP/1.1" 200 -
+[2026-04-11 16:49:22,427] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:22,773] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:22] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:23,113] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:23] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:23,458] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:23] "GET /api/expenses HTTP/1.1" 200 -
+[2026-04-11 16:49:27,118] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:27] "OPTIONS /api/process-bill HTTP/1.1" 200 -
+I0411 16:49:27.663378 18468 onednn_context.cc:81] oneDNN v3.6.2
+[2026-04-11 16:49:41,906] [    INFO] _internal.py:97 - 127.0.0.1 - - [11/Apr/2026 16:49:41] "POST /api/process-bill HTTP/1.1" 200 -

@@ -191,3 +191,10 @@ export async function fetchPredictions() {
 export async function fetchHealth() {
   return readJson("/api/health");
 }
+
+export async function sendMuneemMessage(messages) {
+  return readJson("/api/muneem/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages }),
+  });
+}

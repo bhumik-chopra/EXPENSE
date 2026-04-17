@@ -3,6 +3,7 @@
 [OK] PaddleOCR loaded
 [OK] EasyOCR fallback loaded
 Starting SmartSpend backend on http://localhost:5000
-OCR ready: True
+OCR mode: lazy initialization
+OCR ready: False
  * Serving Flask app 'app'
  * Debug mode: off

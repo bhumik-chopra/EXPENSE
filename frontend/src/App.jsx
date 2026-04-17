@@ -9,6 +9,7 @@ import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import LoginPage from "./components/LoginPage";
 import Bhavishyvani from "./components/Bhavishyvani";
+import Muneem from "./components/Muneem";
 import { ThemeContext } from "./components/ThemeContext";
 import { clearCurrentUser, configureAuthTokenGetter, persistCurrentUser } from "./utils/api";
 
@@ -95,6 +96,7 @@ export default function App() {
   if (page === "Dashboard") content = <Dashboard />;
   else if (page === "Upload Receipt") content = <UploadCard />;
   else if (page === "Charts") content = <Charts />;
+  else if (page === "Muneem") content = <Muneem />;
   else if (page === "BHAVISHYVANI") content = <Bhavishyvani />;
   else if (page === "Reports") content = <Reports />;
   else if (page === "Settings") {
