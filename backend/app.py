@@ -846,20 +846,8 @@ class ReceiptProcessor:
 
             for line in clean_text.splitlines():
                 lower = line.lower()
-                for variant in variants:
-                    if not variant or variant not in line:
-                        continue
-
-                    number_index = line.find(variant)
-                    for token in header_tokens:
-                        token_index = lower.find(token)
-                        if token_index == -1:
-                            continue
-
-                        # Only treat it as a header number when the keyword and
-                        # numeric token are close to each other on the same line.
-                        if abs(token_index - number_index) <= 24:
-                            return True
+                if any(token in lower for token in header_tokens) and any(token and token in line for token in variants):
+                    return True
             return False
 
         def score_amount_candidate(value: float) -> int:
