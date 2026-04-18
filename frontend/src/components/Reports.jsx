@@ -66,7 +66,12 @@ export default function Reports() {
     const csvContent = [
       headers.join(","),
       ...filteredExpenses.map((expense) =>
-        [expense.date, expense.category, expense.amount, expense.currency || "INR"].join(",")
+        [
+          expense.date,
+          expense.category,
+          expense.amount,
+          expense.currency || "INR",
+        ].join(",")
       ),
     ].join("\n");
 
@@ -176,26 +181,26 @@ export default function Reports() {
   };
 
   const cardContent = (
-    <div className="mx-auto w-full max-w-6xl rounded-2xl bg-white p-4 shadow sm:p-6">
+    <div className="rounded-xl bg-white p-4 shadow sm:p-6">
       <h2 className="mb-6 text-xl font-semibold sm:text-2xl">Download Monthly Expenses</h2>
 
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:flex-wrap">
         <input
           type="month"
           value={month}
-          onChange={(event) => setMonth(event.target.value)}
-          className="w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-auto"
+          onChange={(e) => setMonth(e.target.value)}
+          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-auto"
           placeholder="Select month"
         />
         <button
-          className="rounded bg-blue-500 px-4 py-2 text-white shadow transition-colors hover:bg-blue-600 md:w-auto"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition-colors md:w-auto"
           onClick={downloadCSV}
           disabled={loading}
         >
           Download CSV
         </button>
         <button
-          className="rounded bg-green-500 px-4 py-2 text-white shadow transition-colors hover:bg-green-600 md:w-auto"
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow transition-colors md:w-auto"
           onClick={downloadPDF}
           disabled={loading}
         >
@@ -203,79 +208,69 @@ export default function Reports() {
         </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg bg-blue-50 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-blue-600">Total Expenses</h3>
           <p className="text-2xl font-bold text-blue-900">{filteredExpenses.length}</p>
         </div>
-        <div className="rounded-lg bg-green-50 p-4">
+        <div className="bg-green-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-green-600">Total Amount</h3>
           <p className="text-2xl font-bold text-green-900">
             Rs.{filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0).toFixed(2)}
           </p>
         </div>
-        <div className="rounded-lg bg-purple-50 p-4">
+        <div className="bg-purple-50 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-purple-600">Period</h3>
           <p className="text-2xl font-bold text-purple-900">{month || "All Time"}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="py-8 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           <p className="mt-2 text-gray-600">Loading expenses...</p>
         </div>
       ) : filteredExpenses.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-gray-100">
+        <div>
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="hidden bg-gray-50 sm:table-header-group">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="bg-white divide-y divide-gray-200">
               {filteredExpenses.map((expense) => (
-                <tr
-                  key={expense.id}
-                  className="block px-4 py-4 hover:bg-gray-50 sm:table-row sm:px-0 sm:py-0"
-                >
-                  <td className="flex items-center justify-between py-1 text-sm text-gray-900 sm:table-cell sm:px-6 sm:py-4 sm:whitespace-nowrap">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Date
-                    </span>
+                <tr key={expense.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(expense.date).toLocaleDateString()}
                   </td>
-                  <td className="flex items-center justify-between py-1 sm:table-cell sm:px-6 sm:py-4 sm:whitespace-nowrap">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Category
-                    </span>
-                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="flex items-center justify-between py-1 text-sm font-medium text-gray-900 sm:table-cell sm:px-6 sm:py-4 sm:whitespace-nowrap">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Amount
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     Rs.{expense.amount.toFixed(2)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : (
-        <div className="py-8 text-center">
+        <div className="text-center py-8">
           <p className="text-gray-500">No expenses found for the selected period</p>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="text-sm text-gray-400 mt-2">
             Try selecting a different month or upload some receipts first
           </p>
         </div>
@@ -284,7 +279,9 @@ export default function Reports() {
   );
 
   return theme === "dark" ? (
-    <BorderGlow {...darkModeGlowProps}>{cardContent}</BorderGlow>
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
   ) : (
     cardContent
   );

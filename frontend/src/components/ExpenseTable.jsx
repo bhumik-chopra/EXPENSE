@@ -4,7 +4,7 @@ import { Filter, RefreshCw } from "lucide-react";
 import BorderGlow from "./BorderGlow";
 import { darkModeGlowProps } from "./borderGlowTheme";
 import { useTheme } from "./ThemeContext";
-import { formatDateInfo, getCurrentLocalDate } from "../utils/dateUtils";
+import { formatDateInfo, getCurrentLocalDate } from '../utils/dateUtils';
 import { fetchExpenses as fetchExpensesRequest } from "../utils/api";
 
 export default function ExpenseTable() {
@@ -27,8 +27,8 @@ export default function ExpenseTable() {
       });
       setExpenses(data.expenses || []);
     } catch (err) {
-      console.error("Error fetching expenses:", err);
-      setError(err.message || "Failed to connect to server");
+      console.error('Error fetching expenses:', err);
+      setError(err.message || 'Failed to connect to server');
     } finally {
       setLoading(false);
     }
@@ -50,22 +50,23 @@ export default function ExpenseTable() {
   useEffect(() => {
     fetchExpenses();
     fetchAvailableCategories();
-
+    
+    // Listen for expense changes to refresh data
     const handleExpenseChange = () => {
       setTimeout(() => {
         fetchExpenses();
         fetchAvailableCategories();
       }, 500);
     };
-
-    window.addEventListener("expenseAdded", handleExpenseChange);
-    window.addEventListener("expenseDeleted", handleExpenseChange);
-    window.addEventListener("backendRecovered", handleExpenseChange);
-
+    
+    window.addEventListener('expenseAdded', handleExpenseChange);
+    window.addEventListener('expenseDeleted', handleExpenseChange);
+    window.addEventListener('backendRecovered', handleExpenseChange);
+    
     return () => {
-      window.removeEventListener("expenseAdded", handleExpenseChange);
-      window.removeEventListener("expenseDeleted", handleExpenseChange);
-      window.removeEventListener("backendRecovered", handleExpenseChange);
+      window.removeEventListener('expenseAdded', handleExpenseChange);
+      window.removeEventListener('expenseDeleted', handleExpenseChange);
+      window.removeEventListener('backendRecovered', handleExpenseChange);
     };
   }, [fetchAvailableCategories, fetchExpenses]);
 
@@ -85,73 +86,68 @@ export default function ExpenseTable() {
     };
   }, []);
 
-  const filtered = expenses.filter(
-    (expense) =>
-      (!category || category === "All Categories" || expense.category === category) &&
-      (!date || expense.date === date)
+  const filtered = expenses.filter(e =>
+    (!category || category === 'All Categories' || e.category === category) &&
+    (!date || e.date === date)
   );
 
-  const formatCurrency = (amount, currency = "INR") => {
-    const numericAmount = Number(amount || 0).toFixed(2);
-    if (currency === "INR") {
-      return `Rs.${numericAmount}`;
+  const formatCurrency = (amount, currency = 'INR') => {
+    if (currency === 'INR') {
+      return `₹${amount?.toFixed(2)}`;
     }
-    return `$${numericAmount}`;
+    return `$${amount?.toFixed(2)}`;
   };
 
   const cardContent = (
     <Motion.div
-      className="rounded-2xl bg-white p-4 shadow sm:p-5 lg:p-6"
+      className="bg-white rounded-xl shadow p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Expense History</h3>
-        <button
+        <button 
           onClick={fetchExpenses}
-          className="self-end rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 sm:self-auto"
+          className="p-2 text-gray-500 hover:text-gray-700"
           title="Refresh"
         >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
-
-      <div className="mb-4">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-          <select
-            className="w-full rounded-xl border px-3 py-2.5 text-sm"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
+      
+      <div className="mb-4 flex flex-col gap-2 xl:flex-row">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex xl:w-auto">
+          <select 
+            className="rounded-lg border px-3 py-2 text-sm xl:min-w-[180px]" 
+            value={category} 
+            onChange={e => setCategory(e.target.value)}
           >
-            {availableCategories.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+            {availableCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
-          <input
-            type="date"
-            className="w-full rounded-xl border px-3 py-2.5 text-sm"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
+          <input 
+            type="date" 
+            className="rounded-lg border px-3 py-2 text-sm xl:min-w-[170px]" 
+            value={date} 
+            onChange={e => setDate(e.target.value)} 
           />
-          <button
-            className="flex items-center justify-center gap-1 rounded-xl bg-blue-50 px-3 py-2.5 text-blue-700 sm:col-span-2 xl:col-span-1"
+          <button 
+            className="rounded-lg px-3 py-2 bg-blue-50 text-blue-700 flex items-center justify-center gap-1 xl:min-w-[110px]"
             onClick={fetchExpenses}
           >
-            <Filter size={16} />
-            Filter
+            <Filter size={16} />Filter
           </button>
         </div>
       </div>
-
-      <div className="overflow-hidden rounded-2xl border border-gray-100">
+      
+      <div className="overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="hidden sm:table-header-group">
-            <tr className="border-b text-gray-500">
-              <th className="px-4 py-3 text-left">Amount</th>
-              <th className="px-4 py-3 text-left">Category</th>
-              <th className="px-4 py-3 text-left">Date</th>
+          <thead>
+            <tr className="text-gray-500 border-b">
+              <th className="py-2 text-left">Amount</th>
+              <th className="py-2 text-left">Category</th>
+              <th className="py-2 text-left">Date</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +155,7 @@ export default function ExpenseTable() {
               <tr>
                 <td colSpan={3} className="py-8 text-center">
                   <div className="flex items-center justify-center">
-                    <RefreshCw className="mr-2 animate-spin" size={16} />
+                    <RefreshCw className="animate-spin mr-2" size={16} />
                     Loading expenses...
                   </div>
                 </td>
@@ -169,9 +165,9 @@ export default function ExpenseTable() {
                 <td colSpan={3} className="py-8 text-center text-red-500">
                   <div>
                     <p>{error}</p>
-                    <button
+                    <button 
                       onClick={fetchExpenses}
-                      className="mt-2 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                      className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
                       Retry
                     </button>
@@ -181,37 +177,25 @@ export default function ExpenseTable() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={3} className="py-8 text-center text-gray-400">
-                  {expenses.length === 0 ? "No expenses found." : "No expenses match your filters."}
+                  {expenses.length === 0 ? 'No expenses found.' : 'No expenses match your filters.'}
                 </td>
               </tr>
             ) : (
               filtered.map((expense) => (
-                <tr
-                  key={expense.id}
-                  className="block border-b px-4 py-3 last:border-b-0 hover:bg-gray-50 sm:table-row sm:px-0 sm:py-0"
-                >
-                  <td className="flex items-center justify-between py-1 text-green-600 sm:table-cell sm:px-4 sm:py-3 sm:font-semibold">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Amount
-                    </span>
+                <tr key={expense.id} className="border-b hover:bg-gray-50">
+                  <td className="py-3 text-green-600 font-semibold">
                     {formatCurrency(expense.amount, expense.currency)}
                   </td>
-                  <td className="flex items-center justify-between py-1 sm:table-cell sm:px-4 sm:py-3">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Category
-                    </span>
-                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                  <td className="py-3">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
                       {expense.category}
                     </span>
                   </td>
-                  <td className="flex items-center justify-between py-1 text-gray-600 sm:table-cell sm:px-4 sm:py-3">
-                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-gray-400 sm:hidden">
-                      Date
-                    </span>
+                  <td className="py-3 text-gray-600">
                     {(() => {
                       const dateInfo = formatDateInfo(expense.date, currentDate);
                       return (
-                        <span className={dateInfo.isToday ? "font-medium text-green-600" : ""}>
+                        <span className={dateInfo.isToday ? 'text-green-600 font-medium' : ''}>
                           {dateInfo.formatted}
                         </span>
                       );
@@ -223,17 +207,19 @@ export default function ExpenseTable() {
           </tbody>
         </table>
       </div>
-
-      {filtered.length > 0 ? (
-        <div className="mt-4 text-center text-sm text-gray-500">
+      
+      {filtered.length > 0 && (
+        <div className="mt-4 text-sm text-gray-500 text-center">
           Showing {filtered.length} of {expenses.length} expenses
         </div>
-      ) : null}
+      )}
     </Motion.div>
   );
 
   return theme === "dark" ? (
-    <BorderGlow {...darkModeGlowProps}>{cardContent}</BorderGlow>
+    <BorderGlow {...darkModeGlowProps}>
+      {cardContent}
+    </BorderGlow>
   ) : (
     cardContent
   );

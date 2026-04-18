@@ -16,10 +16,10 @@ export default function Settings({ user, onLogout }) {
 
   const settingsCard = (
     <Motion.div
-      className="w-full rounded-[2rem] bg-white p-4 shadow sm:p-6"
+      className="w-full rounded-[2rem] bg-white p-6 shadow"
       whileHover={{ y: -2 }}
     >
-      <div className="rounded-[1.75rem] bg-blue-50 p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-blue-50 p-6">
         <div className="flex flex-col items-center text-center">
         <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-blue-100 text-2xl font-bold text-blue-700 shadow-sm">
           {initials}
@@ -33,7 +33,7 @@ export default function Settings({ user, onLogout }) {
       </div>
 
       <div className="mt-5 space-y-3">
-        <div className="flex items-start gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
+        <div className="flex items-center gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
               <UserRound size={18} />
@@ -47,7 +47,7 @@ export default function Settings({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="flex items-start gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
+        <div className="flex items-center gap-4 rounded-[1.5rem] bg-gray-50 px-4 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
               <ShieldCheck size={18} />

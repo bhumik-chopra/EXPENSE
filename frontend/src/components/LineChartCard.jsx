@@ -62,7 +62,7 @@ export default function LineChartCard() {
 
   const cardContent = (
     <Motion.div
-      className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow sm:p-5 lg:p-6"
+      className="bg-white rounded-xl shadow p-6 flex flex-col gap-2"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -86,7 +86,7 @@ export default function LineChartCard() {
         </div>
       ) : (
         <>
-          <svg viewBox="0 0 120 120" className="mx-auto h-[180px] w-full max-w-[280px] overflow-visible">
+          <svg width={220} height={150} viewBox="0 0 120 120" className="mx-auto">
             <line x1="14" y1="96" x2="106" y2="96" stroke={axisColor} strokeWidth="1.2" />
             <line x1="14" y1="20" x2="14" y2="96" stroke={axisColor} strokeWidth="1.2" />
 
@@ -126,14 +126,14 @@ export default function LineChartCard() {
             )}
           </svg>
 
-          <ul className="mt-2 space-y-2 text-sm">
+          <ul className="mt-2 text-sm">
             {data.length === 0 ? (
               <li className="text-gray-400">No data available.</li>
             ) : (
               data.map((point) => (
-                <li key={point.month} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2">
-                  <span className="truncate">{point.month}</span>
-                  <span style={{ color: labelColor }} className="shrink-0 font-semibold">Rs.{point.amount.toFixed(0)}</span>
+                <li key={point.month} className="flex items-center justify-between gap-3">
+                  <span>{point.month}</span>
+                  <span style={{ color: labelColor }}>Rs.{point.amount.toFixed(0)}</span>
                 </li>
               ))
             )}

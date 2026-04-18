@@ -72,7 +72,7 @@ export default function PieChartCard() {
 
   const cardContent = (
     <Motion.div
-      className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow sm:p-5 lg:p-6"
+      className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -91,7 +91,7 @@ export default function PieChartCard() {
         <>
           <Motion.svg
             viewBox="0 0 120 120"
-            className="mx-auto h-40 w-40 max-w-full -rotate-90 sm:h-44 sm:w-44"
+            className="mx-auto h-44 w-44 -rotate-90"
             initial={{ rotate: -180, opacity: 0 }}
             animate={{ rotate: 0, opacity: 1 }}
             transition={{ duration: 0.6 }}
@@ -140,12 +140,12 @@ export default function PieChartCard() {
 
           <div className="space-y-2">
             {segments.slice(0, 5).map((segment) => (
-              <div key={segment.category} className="flex items-center justify-between gap-3 text-sm">
-                <div className="flex min-w-0 items-center gap-2">
+              <div key={segment.category} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: segment.color }}></span>
-                  <span className="truncate text-gray-700">{segment.category}</span>
+                  <span className="text-gray-700">{segment.category}</span>
                 </div>
-                <span className="shrink-0 font-medium text-gray-900">Rs.{segment.amount.toFixed(2)}</span>
+                <span className="font-medium text-gray-900">Rs.{segment.amount.toFixed(2)}</span>
               </div>
             ))}
           </div>
