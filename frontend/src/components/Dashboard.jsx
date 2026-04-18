@@ -17,7 +17,7 @@ export default function Dashboard() {
 
   return (
     <Motion.div
-      className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
+      className="mx-auto mb-6 grid w-full max-w-7xl grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2 lg:gap-6"
       initial="hidden"
       animate="visible"
       variants={{

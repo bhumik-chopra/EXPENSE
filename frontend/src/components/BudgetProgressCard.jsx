@@ -127,11 +127,11 @@ export default function BudgetProgressCard() {
 
   const cardContent = (
     <Motion.div
-      className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
+      className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow sm:p-5 lg:p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           {getStatusIcon()}
           <h2 className="font-semibold">Monthly Budget Utilization</h2>
@@ -151,7 +151,7 @@ export default function BudgetProgressCard() {
       {showBudgetSetter && (
         <div className="bg-gray-50 rounded-lg p-4 space-y-3">
           <label className="block text-sm font-medium text-gray-700">Set Monthly Budget (Rs.)</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="number"
               value={newBudget}
@@ -179,12 +179,12 @@ export default function BudgetProgressCard() {
           ></div>
         </div>
 
-        <div className="flex justify-between text-sm">
+        <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-3 sm:gap-3">
           <span className={`font-medium ${isOverBudget ? "text-red-600" : "text-gray-700"}`}>
             Rs.{spent.toFixed(2)} spent
           </span>
-          <span className="text-gray-600">Rs.{budget.toFixed(2)} budget</span>
-          <span className={`font-medium ${isOverBudget ? "text-red-600" : "text-green-600"}`}>
+          <span className="text-gray-600 sm:text-center">Rs.{budget.toFixed(2)} budget</span>
+          <span className={`font-medium sm:text-right ${isOverBudget ? "text-red-600" : "text-green-600"}`}>
             {percent.toFixed(1)}%
           </span>
         </div>

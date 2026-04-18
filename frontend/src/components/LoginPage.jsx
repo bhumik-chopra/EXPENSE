@@ -182,7 +182,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
   const loginCard = (
     <Motion.div
-      className={`w-full max-w-2xl rounded-[1.35rem] p-4 shadow-xl backdrop-blur sm:p-5 ${
+      className={`w-full max-w-2xl rounded-[1.35rem] p-3 shadow-xl backdrop-blur sm:p-5 ${
         isDark
           ? "border border-fuchsia-400/20 bg-slate-950/82 text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
           : "border border-white/40 bg-white/95"
@@ -197,7 +197,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               : "bg-blue-50"
           }`}
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="relative h-14 w-full max-w-[220px] overflow-hidden">
               <Motion.img
@@ -224,11 +224,13 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   : "Create a new account with your email and password."}
             </p>
           </div>
-          <ThemeToggle
-            checked={theme === "dark"}
-            onChange={onToggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          />
+          <div className="self-end sm:self-auto">
+            <ThemeToggle
+              checked={theme === "dark"}
+              onChange={onToggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            />
+          </div>
         </div>
         </div>
 

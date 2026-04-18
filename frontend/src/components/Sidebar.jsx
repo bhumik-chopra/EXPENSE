@@ -29,14 +29,14 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
         />
       )}
       <Motion.aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[84vw] flex-col overflow-y-auto bg-white py-6 shadow-md transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[84vw] flex-col overflow-y-auto bg-white px-2 py-5 shadow-md transition-transform duration-300 md:static md:z-auto md:w-60 md:max-w-none md:translate-x-0 md:px-0 md:py-6 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.35 }}
       >
-        <div className="mb-8 px-6 pt-10 md:pt-0">
+        <div className="mb-6 px-4 pt-12 md:px-6 md:pt-0">
           <div className="relative h-16 w-full max-w-[196px] overflow-hidden rounded-2xl">
             <Motion.img
               src={sidebarBadge}
@@ -64,7 +64,7 @@ export default function Sidebar({ setPage, activePage, isOpen, onClose }) {
                 transition={{ delay: 0.05 }}
               >
                 <Motion.button
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition hover:bg-gray-100 ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition hover:bg-gray-100 ${
                     activePage === item.name ? "bg-gray-100 font-semibold" : "text-gray-700"
                   }`}
                   onClick={() => setPage(item.name)}

@@ -403,12 +403,12 @@ export default function UploadCard() {
 
   const cardContent = (
     <Motion.div
-      className="bg-white rounded-xl shadow p-6 flex flex-col gap-4"
+      className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow sm:p-5 lg:p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-blue-800">
             <Sparkles size={16} />
             <span className="text-sm font-semibold">Receipt Import</span>
@@ -475,7 +475,7 @@ export default function UploadCard() {
       ) : (
         <div className="space-y-3">
           <div
-            className={`flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition ${
+            className={`flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition sm:min-h-56 ${
               isDragActive
                 ? "border-blue-500 bg-blue-50"
                 : "border-gray-300 hover:border-blue-400"
@@ -531,7 +531,7 @@ export default function UploadCard() {
                   type="button"
                   onClick={captureFromCamera}
                   disabled={!cameraReady || loading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
                   <Camera size={16} />
                   Capture Receipt

@@ -25,42 +25,46 @@ export default function Navbar({
 
   return (
     <Motion.nav
-      className="flex flex-wrap items-center justify-between gap-3 bg-white px-3 py-3 shadow-sm sm:px-4 md:h-16 md:flex-nowrap md:px-6"
+      className="sticky top-0 z-20 flex flex-col gap-3 bg-white/90 px-3 py-3 shadow-sm backdrop-blur sm:px-4 md:h-16 md:flex-row md:items-center md:justify-between md:px-6"
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <Motion.button
-          className="rounded-full p-2 hover:bg-gray-100 transition md:hidden"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.94 }}
-          onClick={onToggleSidebar}
-          title={sidebarOpen ? "Close navigation" : "Open navigation"}
-        >
-          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
-        </Motion.button>
-        <div className="relative h-9 w-9 overflow-hidden rounded-xl">
-          <Motion.img
-            src={smartspendLogo}
-            alt="Expense Tracker logo"
-            className="absolute inset-0 h-full w-full object-contain p-[3px]"
-            animate={{ opacity: theme === "dark" ? 0 : 1, scale: theme === "dark" ? 0.985 : 1 }}
-            transition={{ duration: 0.42, ease: "easeInOut" }}
-          />
-          <Motion.img
-            src={expenseTrackerLogoDark}
-            alt="Expense Tracker logo dark"
-            className="absolute inset-0 h-full w-full object-contain p-[3px]"
-            animate={{ opacity: theme === "dark" ? 1 : 0, scale: theme === "dark" ? 1 : 0.985 }}
-            transition={{ duration: 0.42, ease: "easeInOut" }}
-          />
+      <div className="flex w-full min-w-0 items-center justify-between gap-3 md:w-auto md:justify-start">
+        <div className="flex min-w-0 items-center gap-2">
+          <Motion.button
+            className="rounded-full p-2 transition hover:bg-gray-100 md:hidden"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            onClick={onToggleSidebar}
+            title={sidebarOpen ? "Close navigation" : "Open navigation"}
+          >
+            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          </Motion.button>
+          <div className="relative h-9 w-9 overflow-hidden rounded-xl">
+            <Motion.img
+              src={smartspendLogo}
+              alt="Expense Tracker logo"
+              className="absolute inset-0 h-full w-full object-contain p-[3px]"
+              animate={{ opacity: theme === "dark" ? 0 : 1, scale: theme === "dark" ? 0.985 : 1 }}
+              transition={{ duration: 0.42, ease: "easeInOut" }}
+            />
+            <Motion.img
+              src={expenseTrackerLogoDark}
+              alt="Expense Tracker logo dark"
+              className="absolute inset-0 h-full w-full object-contain p-[3px]"
+              animate={{ opacity: theme === "dark" ? 1 : 0, scale: theme === "dark" ? 1 : 0.985 }}
+              transition={{ duration: 0.42, ease: "easeInOut" }}
+            />
+          </div>
+          <h1 className="truncate text-base font-bold tracking-tight sm:text-lg md:text-xl">Expense Tracker</h1>
         </div>
-        <h1 className="truncate text-base font-bold tracking-tight sm:text-lg md:text-xl">Expense Tracker</h1>
       </div>
       
-      <div className="flex w-full items-center justify-end gap-2 sm:w-auto md:gap-4">
-        <StatusIndicator />
+      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3 md:w-auto md:flex-nowrap md:gap-4">
+        <div className="order-3 w-full sm:order-none sm:w-auto">
+          <StatusIndicator />
+        </div>
         <Motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
           <ThemeToggle
             checked={theme === "dark"}
@@ -69,7 +73,7 @@ export default function Navbar({
           />
         </Motion.div>
         <Motion.button
-          className="hidden max-w-[240px] items-center gap-3 rounded-full px-3 py-2 transition hover:bg-gray-100 sm:flex"
+          className="hidden max-w-[240px] items-center gap-3 rounded-full px-3 py-2 transition hover:bg-gray-100 lg:flex"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={onOpenSettings}
@@ -85,7 +89,7 @@ export default function Navbar({
           <Settings size={18} />
         </Motion.button>
         <Motion.button
-          className="inline-flex items-center justify-center rounded-full p-2 transition hover:bg-gray-100 sm:hidden"
+          className="inline-flex items-center justify-center rounded-full p-2 transition hover:bg-gray-100 lg:hidden"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={onOpenSettings}
