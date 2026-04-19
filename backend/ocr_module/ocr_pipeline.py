@@ -205,7 +205,9 @@ CATEGORY_KEYWORDS = {
         "dominos", "kfc", "mcdonalds", "subway", "zomato", "swiggy",
         "bakery", "cake", "bread", "muffin", "snack", "quick bill", "dine in",
         "dining", "food", "thali", "menu", "order", "flame kitchen",
-        "amrut sagar", "jamjar", "molly's", "molly",
+        "amrut sagar", "jamjar", "molly's", "molly", "biscuit", "cookies",
+        "namkeen", "kaju", "pista", "dry fruit", "dryfruit", "fruit",
+        "frontier biscuit",
     ],
     "Healthcare": [
         "hospital", "clinic", "doctor", "medical", "pharmacy", "medicine",
@@ -225,8 +227,8 @@ CATEGORY_KEYWORDS = {
         "sugar", "milk", "tomato", "banana",
         "carpet", "pillow", "slipper", "furniture", "home center",
         "amazon", "flipkart", "zara", "nike", "adidas",
-        "informa", "carrefour", "walmart", "uma enterprises", "biscuit",
-        "frontier", "freshmart", "wal-mart", "wal*mart",
+        "informa", "carrefour", "walmart", "uma enterprises",
+        "freshmart", "wal-mart", "wal*mart",
     ],
     "Transport": [
         "uber", "ola", "bus", "metro", "petrol", "diesel", "fuel",

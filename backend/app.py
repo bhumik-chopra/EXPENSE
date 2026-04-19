@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 import os
 import re
 import sys
@@ -60,7 +61,13 @@ if str(OCR_SRC_DIR) not in sys.path:
 if OCR_BACKEND_KIND == "production":
     from production import OCRService
 else:
-    from ocr_pipeline import extract_amount, predict_category, process_receipt
+    _ocr_pipeline_module = None
+
+    def load_ocr_pipeline_module():
+        global _ocr_pipeline_module
+        if _ocr_pipeline_module is None:
+            _ocr_pipeline_module = importlib.import_module("ocr_pipeline")
+        return _ocr_pipeline_module
 
     class OCRService:
         def __init__(self, models_dir: str | None = None, use_gpu: bool = False, ocr_backend: str = "bhumik") -> None:
@@ -69,7 +76,7 @@ else:
             self.ocr_backend = ocr_backend or "bhumik"
 
         def process_receipt(self, image_path: str) -> dict:
-            result = process_receipt(image_path)
+            result = load_ocr_pipeline_module().process_receipt(image_path)
             amount = result.get("total_amount")
             all_amounts = [amount] if amount not in (None, "", 0) else []
             return {
@@ -85,15 +92,50 @@ else:
             }
 
         def predict_category(self, text: str) -> str:
-            category, _confidence = predict_category(text)
+            category, _confidence = load_ocr_pipeline_module().predict_category(text)
             return category
 
         def refine_category(self, raw_text: str, category: str) -> str:
+            text_lower = str(raw_text or "").lower()
+            normalized_category = str(category or "").strip().lower()
+
+            retail_store_markers = (
+                " store",
+                " mart",
+                " supermarket",
+                " hypermart",
+                "tax invoice",
+                "gst",
+                "item qty",
+                "description",
+                " rate ",
+                " amt",
+            )
+            healthcare_markers = (
+                "pharmacy",
+                "medical store",
+                "medical",
+                "medicine",
+                "doctor",
+                "clinic",
+                "hospital",
+                "prescription",
+                "patient",
+                "treatment",
+                "diagnostic",
+            )
+
+            if normalized_category == "healthcare":
+                has_retail_signal = any(marker in text_lower for marker in retail_store_markers)
+                has_healthcare_signal = any(marker in text_lower for marker in healthcare_markers)
+                if has_retail_signal and not has_healthcare_signal:
+                    return "Shopping"
+
             return category
 
         @staticmethod
         def extract_bill_amount(raw_text: str) -> tuple[list[float], float]:
-            amount = extract_amount(raw_text)
+            amount = load_ocr_pipeline_module().extract_amount(raw_text)
             if amount is None:
                 return [], 0.0
             return [float(amount)], float(amount)
@@ -534,7 +576,8 @@ class MongoExpenseStore:
         if date_filter:
             query["date"] = date_filter
         if category and category != "All Categories":
-            query["category"] = category
+            escaped_category = re.escape(str(category).strip())
+            query["category"] = {"$regex": f"^{escaped_category}$", "$options": "i"}
 
         docs = list(self.expenses.find(query).sort([("date", -1), ("createdAt", -1)]))
         expenses = []
@@ -673,6 +716,34 @@ class ReceiptProcessor:
             ocr_backend=result.get("ocr_backend"),
             all_amounts=result.get("all_amounts", []),
         )
+
+        ocr_amount = self._parse_amount_value(result.get("amount"))
+        raw_text_lower = raw_text.lower()
+        has_total_signal = any(
+            token in raw_text_lower
+            for token in (
+                "grand total",
+                "round off total",
+                "net total",
+                "net to pay",
+                "pls pay",
+                "please pay",
+                "amount due",
+                "total payable",
+                "invoice total",
+            )
+        ) or bool(re.search(r"\bgrand\b.*\btotal\b|\btotal\b.*\bgrand\b", raw_text_lower))
+
+        if parsed.get("manual_entry_required") and ocr_amount > 0 and has_total_signal:
+            parsed.update(
+                {
+                    "manual_entry_required": False,
+                    "message": "",
+                    "amount": ocr_amount,
+                    "total_amount": ocr_amount,
+                }
+            )
+
         parsed["confidence"] = 0.82 if raw_text else 0.35
         return parsed
 
@@ -846,8 +917,18 @@ class ReceiptProcessor:
 
             for line in clean_text.splitlines():
                 lower = line.lower()
-                if any(token in lower for token in header_tokens) and any(token and token in line for token in variants):
-                    return True
+                for variant in variants:
+                    if not variant:
+                        continue
+                    start = 0
+                    while True:
+                        index = line.find(variant, start)
+                        if index == -1:
+                            break
+                        window_lower = lower[max(0, index - 48) : min(len(lower), index + len(variant) + 48)]
+                        if any(token in window_lower for token in header_tokens):
+                            return True
+                        start = index + len(variant)
             return False
 
         def score_amount_candidate(value: float) -> int:
@@ -948,7 +1029,29 @@ class ReceiptProcessor:
         amount = round(float(default_amount), 2) if default_amount and default_amount > 0 else (
             round(unique_amounts[0], 2) if unique_amounts else 0
         )
-        category = self._normalize_category(default_category or self._predict_category(clean_text))
+
+        # Recover from edge cases where OCR already found a valid total but the
+        # later scoring path still collapses to zero after noisy single-line text.
+        if amount <= 0:
+            fallback_candidates = sorted(
+                {
+                    round(float(value), 2)
+                    for value in [default_amount, detected_amount, labeled_total, *unique_amounts]
+                    if value and float(value) > 0 and not is_header_like_number(float(value))
+                },
+                key=lambda value: (score_amount_candidate(value), value),
+                reverse=True,
+            )
+            if fallback_candidates:
+                amount = fallback_candidates[0]
+
+        predicted_category = default_category or self._predict_category(clean_text)
+        if self.ocr_service is not None:
+            try:
+                predicted_category = self.ocr_service.refine_category(clean_text, predicted_category)
+            except Exception:
+                pass
+        category = self._normalize_category(predicted_category)
         vendor = self._extract_vendor(clean_text)
         date_value = default_date if self._is_valid_date_string(default_date) else self._extract_date(clean_text)
         currency = self._detect_currency(clean_text)
@@ -1394,7 +1497,15 @@ class ReceiptProcessor:
         direct_patterns = [
             (r"\b(\d{4})-(\d{2})-(\d{2})\b", lambda m: f"{m.group(1)}-{m.group(2)}-{m.group(3)}"),
             (
+                r"\b(?:dt|date|invoice\s*dt|invoice\s*date)\s*[:.]?\s*(\d{1,2})\s*([A-Za-z]{3,9})[-/\s]*(\d{2,4})(?=\D|$)",
+                lambda m: build_date(m.group(1), m.group(2), m.group(3)),
+            ),
+            (
                 r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})(?=\d{1,2}:\d{2}(?:\s*[APMapm]{2})?)",
+                lambda m: build_date(m.group(1), m.group(2), m.group(3)),
+            ),
+            (
+                r"(?<!\d)(\d{1,2})\s*([A-Za-z]{3,9})[-/\s]+(\d{2,4})(?=\D|$)",
                 lambda m: build_date(m.group(1), m.group(2), m.group(3)),
             ),
             (
@@ -1714,14 +1825,27 @@ class ReceiptProcessor:
         mapping = {
             "food": "Food & Dining",
             "food & dining": "Food & Dining",
+            "food and dining": "Food & Dining",
+            "dining": "Food & Dining",
             "transport": "Transportation",
             "transportation": "Transportation",
+            "transit": "Transportation",
+            "travel": "Travel",
             "bills": "Bills & Utilities",
             "bills & utilities": "Bills & Utilities",
+            "bills and utilities": "Bills & Utilities",
+            "utilities": "Bills & Utilities",
+            "utility": "Bills & Utilities",
             "healthcare": "Healthcare",
+            "health care": "Healthcare",
+            "medical": "Healthcare",
             "shopping": "Shopping",
             "entertainment": "Entertainment",
             "groceries": "Groceries",
+            "grocery": "Groceries",
+            "education": "Education",
+            "school": "Education",
+            "tuition": "Education",
             "others": "Other",
             "other": "Other",
         }

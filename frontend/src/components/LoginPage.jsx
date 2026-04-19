@@ -21,8 +21,11 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpDob, setSignUpDob] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [pendingVerification, setPendingVerification] = useState(false);
+  const [signUpVerificationCode, setSignUpVerificationCode] = useState("");
+  const [pendingSignUpVerification, setPendingSignUpVerification] = useState(false);
+  const [pendingSignInVerification, setPendingSignInVerification] = useState(false);
+  const [signInVerificationCode, setSignInVerificationCode] = useState("");
+  const [signInVerificationLabel, setSignInVerificationLabel] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -76,10 +79,66 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
     return `Additional sign-in steps are required. Clerk returned status: ${status}.`;
   };
 
-  const resetSignUpFlow = () => {
-    setPendingVerification(false);
-    setVerificationCode("");
+  const factorSupportsStrategy = (factor, strategy) => {
+    if (!factor) {
+      return false;
+    }
+
+    if (typeof factor === "string") {
+      return factor === strategy;
+    }
+
+    return factor.strategy === strategy;
+  };
+
+  const getFactorLabel = (factor) => {
+    if (!factor || typeof factor === "string") {
+      return "";
+    }
+
+    return (
+      factor.safeIdentifier ||
+      factor.emailAddress ||
+      factor.phoneNumber ||
+      factor.displayName ||
+      ""
+    );
+  };
+
+  const resetSignInFlow = () => {
+    setPendingSignInVerification(false);
+    setSignInVerificationCode("");
+    setSignInVerificationLabel("");
     setError("");
+  };
+
+  const resetSignUpFlow = () => {
+    setPendingSignUpVerification(false);
+    setSignUpVerificationCode("");
+    setError("");
+  };
+
+  const beginSignInEmailVerification = async (signInResult) => {
+    const emailFactor =
+      signInResult.supportedSecondFactors?.find((factor) => factorSupportsStrategy(factor, "email_code")) ||
+      signInResult.supportedFirstFactors?.find((factor) => factorSupportsStrategy(factor, "email_code"));
+
+    if (!emailFactor) {
+      throw new Error(formatSignInStatus(signInResult));
+    }
+
+    if (signInResult.status === "needs_second_factor" || signInResult.status === "needs_client_trust") {
+      await signIn.prepareSecondFactor({ strategy: "email_code" });
+    } else {
+      await signIn.prepareFirstFactor({
+        strategy: "email_code",
+        emailAddressId: emailFactor.emailAddressId,
+      });
+    }
+
+    setPendingSignInVerification(true);
+    setSignInVerificationCode("");
+    setSignInVerificationLabel(getFactorLabel(emailFactor));
   };
 
   const handleSignIn = async (event) => {
@@ -90,6 +149,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
     setLoading(true);
     setError("");
+    resetSignInFlow();
 
     try {
       const normalizedIdentifier = username.trim().toLowerCase();
@@ -99,6 +159,16 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
       });
 
       if (result.status !== "complete") {
+        if (
+          result.status === "needs_second_factor" ||
+          result.status === "needs_client_trust" ||
+          (result.status === "needs_first_factor" &&
+            result.supportedFirstFactors?.some((factor) => factorSupportsStrategy(factor, "email_code")))
+        ) {
+          await beginSignInEmailVerification(result);
+          return;
+        }
+
         throw new Error(formatSignInStatus(result));
       }
 
@@ -144,8 +214,8 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
         strategy: "email_code",
       });
 
-      setPendingVerification(true);
-      setVerificationCode("");
+      setPendingSignUpVerification(true);
+      setSignUpVerificationCode("");
     } catch (submitError) {
       setError(formatClerkError(submitError, "Sign up failed"));
     } finally {
@@ -164,7 +234,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
 
     try {
       const result = await signUp.attemptEmailAddressVerification({
-        code: verificationCode,
+        code: signUpVerificationCode,
       });
 
       if (result.status !== "complete") {
@@ -172,6 +242,42 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
       }
 
       await setSignUpActive({ session: result.createdSessionId });
+      onLoginSuccess?.();
+    } catch (verificationError) {
+      setError(formatClerkError(verificationError, "Verification failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySignInEmail = async (event) => {
+    event.preventDefault();
+    if (!isSignInLoaded) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const currentStatus = signIn?.status;
+      const isSecondFactorFlow =
+        currentStatus === "needs_second_factor" || currentStatus === "needs_client_trust";
+      const result = isSecondFactorFlow
+        ? await signIn.attemptSecondFactor({
+            strategy: "email_code",
+            code: signInVerificationCode,
+          })
+        : await signIn.attemptFirstFactor({
+            strategy: "email_code",
+            code: signInVerificationCode,
+          });
+
+      if (result.status !== "complete") {
+        throw new Error(formatSignInStatus(result) || "Verification is not complete yet.");
+      }
+
+      await setSignInActive({ session: result.createdSessionId });
       onLoginSuccess?.();
     } catch (verificationError) {
       setError(formatClerkError(verificationError, "Verification failed"));
@@ -218,8 +324,10 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             <h1 className="mt-1.5 text-[1.4rem] font-bold leading-tight sm:text-[1.65rem]">Sign in</h1>
             <p className={`mt-1 text-[13px] ${isDark ? "text-slate-300" : "text-gray-600"}`}>
               {mode === "signin"
-                ? "Sign in with your email and password."
-                : pendingVerification
+                ? pendingSignInVerification
+                  ? "Enter the verification code sent to your email to finish signing in."
+                  : "Sign in with your email and password."
+                : pendingSignUpVerification
                   ? "Enter the verification code sent to your email."
                   : "Create a new account with your email and password."}
             </p>
@@ -251,6 +359,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             onClick={() => {
               setMode("signin");
               setError("");
+              resetSignInFlow();
               resetSignUpFlow();
             }}
           >
@@ -270,6 +379,7 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
             onClick={() => {
               setMode("signup");
               setError("");
+              resetSignInFlow();
               resetSignUpFlow();
             }}
           >
@@ -278,6 +388,84 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
         </div>
 
         {mode === "signin" ? (
+          pendingSignInVerification ? (
+            <form className="space-y-3" onSubmit={handleVerifySignInEmail}>
+              <div
+                className={`rounded-xl px-4 py-2.5 text-sm ${
+                  isDark
+                    ? "border border-white/10 bg-white/6 text-slate-200"
+                    : "border border-slate-200 bg-slate-50 text-slate-700"
+                }`}
+              >
+                <p className="font-medium">Check your email</p>
+                <p className="mt-1">
+                  We sent a verification code
+                  {signInVerificationLabel ? (
+                    <>
+                      {" "}
+                      to <span className="font-semibold">{signInVerificationLabel}</span>
+                    </>
+                  ) : (
+                    " to your email address"
+                  )}
+                  .
+                </p>
+              </div>
+
+              <label className="block">
+                <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Verification code</span>
+                <div
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
+                    isDark
+                      ? "border border-white/12 bg-black/20"
+                      : "border"
+                  }`}
+                >
+                  <Mail size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
+                  <input
+                    type="text"
+                    value={signInVerificationCode}
+                    onChange={(event) => setSignInVerificationCode(event.target.value)}
+                    placeholder="Enter code"
+                    className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
+                      isDark
+                        ? "text-white caret-white placeholder:text-slate-500"
+                        : "text-slate-900 caret-slate-900 placeholder:text-slate-400"
+                    }`}
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </label>
+
+              {error ? (
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-600">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-2.25 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Verifying..." : "Verify and sign in"}
+                </button>
+                <button
+                  type="button"
+                  className={`w-full rounded-xl px-4 py-2.25 font-semibold transition ${
+                    isDark
+                      ? "border border-white/12 bg-white/6 text-slate-100 hover:bg-white/10"
+                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={resetSignInFlow}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : (
             <form className="space-y-3" onSubmit={handleSignIn}>
             <label className="block">
               <span className={`mb-1 block text-sm font-medium ${isDark ? "text-slate-100" : ""}`}>Email</span>
@@ -353,8 +541,9 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
               {loading ? "Signing in..." : "Login"}
             </button>
           </form>
+          )
         ) : (
-          pendingVerification ? (
+          pendingSignUpVerification ? (
             <form className="space-y-3" onSubmit={handleVerifyEmail}>
               <div
                 className={`rounded-xl px-4 py-2.5 text-sm ${
@@ -381,8 +570,8 @@ export default function LoginPage({ theme, onToggleTheme, onLoginSuccess }) {
                   <Mail size={18} className={isDark ? "text-slate-400" : "text-gray-500"} />
                   <input
                     type="text"
-                    value={verificationCode}
-                    onChange={(event) => setVerificationCode(event.target.value)}
+                    value={signUpVerificationCode}
+                    onChange={(event) => setSignUpVerificationCode(event.target.value)}
                     placeholder="Enter code"
                     className={`auth-input w-full border-0 bg-transparent p-0 focus:outline-none ${
                       isDark

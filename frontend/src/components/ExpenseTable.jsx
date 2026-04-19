@@ -16,6 +16,7 @@ export default function ExpenseTable() {
   const [category, setCategory] = useState("All Categories");
   const [date, setDate] = useState("");
   const [currentDate, setCurrentDate] = useState(getCurrentLocalDate());
+  const normalizeCategoryValue = (value) => String(value || "").trim().toLowerCase();
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -39,7 +40,11 @@ export default function ExpenseTable() {
       const data = await fetchExpensesRequest();
       const nextCategories = [
         "All Categories",
-        ...new Set((data.expenses || []).map((expense) => expense.category).filter(Boolean)),
+        ...new Set(
+          (data.expenses || [])
+            .map((expense) => String(expense.category || "").trim())
+            .filter(Boolean)
+        ),
       ];
       setAvailableCategories(nextCategories);
     } catch (err) {
@@ -86,9 +91,12 @@ export default function ExpenseTable() {
     };
   }, []);
 
-  const filtered = expenses.filter(e =>
-    (!category || category === 'All Categories' || e.category === category) &&
-    (!date || e.date === date)
+  const filtered = expenses.filter(
+    (expense) =>
+      (!category ||
+        category === "All Categories" ||
+        normalizeCategoryValue(expense.category) === normalizeCategoryValue(category)) &&
+      (!date || expense.date === date)
   );
 
   const formatCurrency = (amount, currency = 'INR') => {

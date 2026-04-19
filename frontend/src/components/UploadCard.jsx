@@ -224,10 +224,15 @@ export default function UploadCard() {
 
     try {
       const result = await processReceiptFile(file);
-      const resolvedAmount = inferAmountFromExtractedText(
+      const backendAmount = Number(result.amount ?? result.total_amount ?? 0);
+      const inferredAmount = inferAmountFromExtractedText(
         result.extracted_text || "",
-        result.amount || result.total_amount || 0
+        backendAmount
       );
+      const resolvedAmount =
+        Number.isFinite(backendAmount) && backendAmount > 0
+          ? backendAmount
+          : inferredAmount;
       const normalized = {
         amount: resolvedAmount,
         currency: result.currency || "INR",

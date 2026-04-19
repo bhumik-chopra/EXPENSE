@@ -150,7 +150,7 @@ export async function createExpense(expenseData) {
 export async function fetchExpenses(params = {}) {
   const searchParams = new URLSearchParams();
   if (params.category && params.category !== "All Categories") {
-    searchParams.set("category", params.category);
+    searchParams.set("category", String(params.category).trim());
   }
   if (params.start_date) {
     searchParams.set("start_date", params.start_date);
